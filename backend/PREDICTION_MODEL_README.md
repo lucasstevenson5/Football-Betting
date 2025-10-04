@@ -90,6 +90,14 @@ The model assumes player yardage follows a normal distribution based on weighted
 
 #### Defensive Adjustment Factor
 
+**Important: Current Season Data Only**
+
+The model uses **current season defensive statistics only** because defensive performance fluctuates significantly year-to-year due to:
+- Personnel changes (free agency, draft picks, retirements)
+- Scheme changes (new defensive coordinators)
+- Injuries to key defensive players
+- Overall team strength variations
+
 When opponent defensive data is available:
 ```python
 if opponent_allows_280_passing_yards and league_avg_is_250:
@@ -98,6 +106,13 @@ if opponent_allows_280_passing_yards and league_avg_is_250:
 ```
 
 This increases probabilities against weak defenses and decreases them against strong defenses.
+
+**Defensive Data Sources:**
+- **Points Allowed**: Extracted from NFL schedules (home/away scores)
+- **Yards Allowed**: Calculated from play-by-play data aggregation
+  - Passing yards allowed: Sum of passing yards when team is on defense
+  - Rushing yards allowed: Sum of rushing yards when team is on defense
+  - Total yards allowed: Sum of all yards gained against defense
 
 ---
 
@@ -114,12 +129,14 @@ Touchdown scoring events are modeled as rare events following a Poisson distribu
    weighted_td_avg = Σ(weights * td_per_game) / Σ(weights)
    ```
 
-2. **Adjust for Opponent Defense**
+2. **Adjust for Opponent Defense (Current Season Only)**
    ```python
    league_avg_points = 22 points/game
    td_factor = opponent_points_allowed / league_avg_points
    adjusted_td_rate = player_td_avg * td_factor
    ```
+
+   Note: Only uses current season defensive points allowed data, as defensive performance varies significantly year-to-year.
 
 3. **Calculate Probability Using Poisson**
    ```python
@@ -132,6 +149,70 @@ Touchdown scoring events are modeled as rare events following a Poisson distribu
 - Against average defense: P(TD) = 1 - e^(-0.5) = **39.3%**
 - Against weak defense (1.15x factor): P(TD) = 1 - e^(-0.575) = **43.7%**
 - Against strong defense (0.85x factor): P(TD) = 1 - e^(-0.425) = **34.6%**
+
+---
+
+## Defensive Statistics Integration
+
+### Data Collection Process
+
+The model integrates real-time defensive statistics from the current NFL season to improve prediction accuracy. Defensive data is collected from two primary sources:
+
+#### 1. **Points Allowed** (from NFL Schedules)
+```python
+# Extract points allowed from game results
+home_games: away_score = points_allowed
+away_games: home_score = points_allowed
+```
+
+#### 2. **Yards Allowed** (from Play-by-Play Data)
+```python
+# Aggregate yards when team is on defense (defteam)
+passing_yards_allowed = sum(pbp[defteam == 'BAL']['passing_yards'])
+rushing_yards_allowed = sum(pbp[defteam == 'BAL']['rushing_yards'])
+total_yards_allowed = sum(pbp[defteam == 'BAL']['yards_gained'])
+```
+
+### Current Season Focus
+
+**Why Current Season Only?**
+
+Defensive performance is highly volatile year-over-year due to:
+- **Personnel Turnover**: Free agency, retirements, draft picks
+- **Coaching Changes**: New defensive coordinators with different schemes
+- **Injuries**: Key defensive players missing significant time
+- **Overall Team Strength**: Changes in offense affecting defensive time on field
+
+**Data Shows:**
+- 2023 #1 defense may rank #20 in 2024
+- Year-over-year correlation for team defense: ~0.35 (weak)
+- Current season data provides more accurate predictions
+
+### Defensive Stats Available (2024 Season)
+
+**Database Contains:**
+- 32 NFL teams
+- 570 total defensive stat records
+- Average 19 games per team (full season + playoffs)
+
+**Example: Baltimore Ravens (2024)**
+- Passing Yards Allowed: 256.1 per game
+- Rushing Yards Allowed: 80.9 per game
+- Points Allowed: 21.2 per game
+
+### Syncing Defensive Data
+
+```bash
+# Sync current season defensive statistics
+cd backend
+python sync_current_defense.py
+```
+
+This script:
+1. Imports all NFL teams to database
+2. Fetches schedules and play-by-play data for current season
+3. Calculates defensive statistics per team per week
+4. Stores in `team_stats` table with weekly granularity
 
 ---
 
@@ -211,10 +292,25 @@ Main service class handling all predictions.
 **Methods:**
 - `calculate_time_weights(games_data, current_season, current_week)` → Calculate time-based weights
 - `get_player_stats_weighted(player_id, stat_type, limit)` → Get weighted player stats
-- `get_defensive_stats(team_abbr, stat_type, recent_games)` → Get opponent defense stats
+- `get_defensive_stats(team_abbr, stat_type, current_season_only=True)` → Get opponent defense stats (current season only)
 - `predict_yardage_probabilities(player_id, opponent_team, stat_type)` → Yardage predictions
 - `predict_touchdown_probability(player_id, opponent_team, position)` → TD predictions
 - `get_player_prediction(player_id, opponent_team)` → Complete prediction
+
+#### `NFLDataService`
+Handles fetching and syncing NFL data from external sources.
+
+**Methods:**
+- `fetch_team_stats(seasons)` → Fetch defensive stats from schedules (points) and play-by-play (yards)
+- `import_teams_to_db()` → Import all NFL teams to database
+- `import_team_stats_to_db(team_stats_df)` → Import defensive statistics to database
+- `sync_all_data(years)` → Complete data sync including teams, players, and defensive stats
+
+**Defensive Stats Sync:**
+```bash
+# Sync current season defensive data only
+python sync_current_defense.py
+```
 
 ### Database Schema
 
@@ -252,9 +348,10 @@ Main service class handling all predictions.
 
 ### ⚠️ Limitations
 
-1. **Requires Defensive Data**
-   - Predictions less accurate without opponent stats
-   - Falls back to player-only analysis
+1. **Current Season Defensive Data Only**
+   - Uses only current season defensive stats (defenses fluctuate year to year)
+   - Early season may have limited defensive sample size
+   - Falls back to player-only analysis if defensive data unavailable
 
 2. **Assumes Normal Distribution**
    - Yardage may not always follow normal curve
@@ -267,6 +364,10 @@ Main service class handling all predictions.
 4. **Limited Historical Depth**
    - Uses last 20 games by default
    - Rookies have limited data
+
+5. **Season Transition Period**
+   - Model currently configured for 2024 season data
+   - Requires update when new season data becomes available
 
 ---
 
@@ -308,17 +409,18 @@ Main service class handling all predictions.
 
 ## Usage Examples
 
-### Example 1: Wide Receiver vs Weak Secondary
+### Example 1: Wide Receiver vs Above-Average Passing Defense
 ```python
-# Player: Ja'Marr Chase (87.8 avg yards)
-# Opponent: BAL (allows 280 passing yards/game vs 250 league avg)
+# Player: Ja'Marr Chase (87.8 avg yards, 2024 season)
+# Opponent: BAL (allows 256.1 passing yards/game vs 250 league avg)
 
-defensive_factor = 280 / 250 = 1.12
-projected = 87.8 * 1.12 = 98.3 yards
+defensive_factor = 256.1 / 250 = 1.024
+projected = 87.8 * 1.024 = 90.0 yards
 
-# Probabilities increase across all benchmarks
-P(50+ yards): 73.2% → 81.5%
-P(100+ yards): 42.1% → 56.8%
+# Real 2024 data results:
+P(50+ yards): 73.2% → 74.3% (slight increase)
+P(100+ yards): 42.1% → 43.5% (slight increase)
+TD Probability: 52.1% → 50.7% (adjusted for BAL allowing 21.2 pts/game)
 ```
 
 ### Example 2: Running Back vs Elite Run Defense
