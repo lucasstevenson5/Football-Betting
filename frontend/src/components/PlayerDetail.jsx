@@ -7,6 +7,7 @@ const PlayerDetail = ({ playerId, onClose }) => {
   const [playerData, setPlayerData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('career'); // 'career' or 'predictions'
 
   useEffect(() => {
     fetchPlayerCareerStats();
@@ -62,7 +63,26 @@ const PlayerDetail = ({ playerId, onClose }) => {
           </div>
         </div>
 
-        <div className="career-summary">
+        {/* Tabs */}
+        <div className="tabs">
+          <button
+            className={`tab ${activeTab === 'career' ? 'active' : ''}`}
+            onClick={() => setActiveTab('career')}
+          >
+            Career Stats
+          </button>
+          <button
+            className={`tab ${activeTab === 'predictions' ? 'active' : ''}`}
+            onClick={() => setActiveTab('predictions')}
+          >
+            Predictions
+          </button>
+        </div>
+
+        {/* Career Stats Tab */}
+        {activeTab === 'career' && (
+          <>
+            <div className="career-summary">
           <h3>Career Statistics</h3>
           <div className="stats-grid">
             <div className="stat-box">
@@ -162,13 +182,17 @@ const PlayerDetail = ({ playerId, onClose }) => {
             </div>
           ))}
         </div>
+          </>
+        )}
 
-        {/* Prediction Section */}
-        <PredictionDisplay
-          playerId={player.id}
-          playerName={player.name}
-          playerTeam={player.team}
-        />
+        {/* Predictions Tab */}
+        {activeTab === 'predictions' && (
+          <PredictionDisplay
+            playerId={player.id}
+            playerName={player.name}
+            playerTeam={player.team}
+          />
+        )}
       </div>
     </div>
   );
