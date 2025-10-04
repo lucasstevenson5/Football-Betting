@@ -129,10 +129,8 @@ class PredictionService:
         if not team:
             return None, None
 
-        # Get current season
-        # Note: For development/testing, using 2024 season
-        # In production, this would dynamically determine the current season
-        current_season = 2024  # TODO: Make this dynamic when 2025 data is available
+        # Get current season - now using 2025 data from ESPN API
+        current_season = 2025
 
         # Build query for defensive stats
         query = TeamStats.query.filter(
@@ -248,10 +246,8 @@ class PredictionService:
         # Use current season only since defenses fluctuate year to year
         team = Team.query.filter_by(team_abbr=opponent_team).first()
         if team:
-            # Get current season
-            # Note: For development/testing, using 2024 season
-            # In production, this would dynamically determine the current season
-            current_season = 2024  # TODO: Make this dynamic when 2025 data is available
+            # Get current season - now using 2025 data from ESPN API
+            current_season = 2025
 
             # Query current season defensive stats only
             recent_stats = TeamStats.query.filter(
@@ -286,13 +282,28 @@ class PredictionService:
     def get_player_prediction(self, player_id, opponent_team):
         """
         Get complete prediction for a player against an opponent
+
+        Returns separate rushing and receiving predictions for all positions
         """
         # Get player info
         player = Player.query.get(player_id)
         if not player:
             return None
 
-        # Determine stat type based on position
+        # Get both rushing and receiving predictions for all players
+        receiving_pred = self.predict_yardage_probabilities(
+            player_id, opponent_team, stat_type='receiving_yards'
+        )
+
+        rushing_pred = self.predict_yardage_probabilities(
+            player_id, opponent_team, stat_type='rushing_yards'
+        )
+
+        td_pred = self.predict_touchdown_probability(
+            player_id, opponent_team, position=player.position
+        )
+
+        # Determine primary stat type based on position (for backwards compatibility)
         if player.position in ['WR', 'TE']:
             primary_stat = 'receiving_yards'
         elif player.position == 'RB':
@@ -300,20 +311,12 @@ class PredictionService:
         else:
             primary_stat = 'total_yards'
 
-        # Get predictions
-        yardage_pred = self.predict_yardage_probabilities(
-            player_id, opponent_team, stat_type=primary_stat
-        )
-
-        td_pred = self.predict_touchdown_probability(
-            player_id, opponent_team, position=player.position
-        )
-
         return {
             'player': player.to_dict(),
             'opponent': opponent_team,
             'stat_type': primary_stat,
-            'yardage_predictions': yardage_pred,
+            'receiving_predictions': receiving_pred,
+            'rushing_predictions': rushing_pred,
             'touchdown_prediction': td_pred
         }
 
