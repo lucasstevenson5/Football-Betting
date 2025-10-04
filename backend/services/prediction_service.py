@@ -111,28 +111,46 @@ class PredictionService:
 
         return weighted_mean, weighted_std, values.tolist()
 
-    def get_defensive_stats(self, team_abbr, stat_type='passing', recent_games=5):
+    def get_defensive_stats(self, team_abbr, stat_type='passing', current_season_only=True):
         """
-        Get team's recent defensive stats
-        Returns average yards allowed per game
+        Get team's defensive stats from current season only
+        Defenses fluctuate year to year, so we only use current season data
+
+        Args:
+            team_abbr: Team abbreviation (e.g., 'BAL')
+            stat_type: 'passing', 'rushing', or 'total'
+            current_season_only: If True, only use current season (default: True)
+
+        Returns:
+            Tuple of (average yards allowed, std deviation)
         """
         # Get team
         team = Team.query.filter_by(team_abbr=team_abbr).first()
         if not team:
             return None, None
 
-        # Get recent defensive stats
-        stats = TeamStats.query.filter(
+        # Get current season
+        # Note: For development/testing, using 2024 season
+        # In production, this would dynamically determine the current season
+        current_season = 2024  # TODO: Make this dynamic when 2025 data is available
+
+        # Build query for defensive stats
+        query = TeamStats.query.filter(
             TeamStats.team_id == team.id,
             TeamStats.week.isnot(None)
-        ).order_by(
-            TeamStats.season.desc(),
-            TeamStats.week.desc()
-        ).limit(recent_games).all()
+        )
+
+        # Restrict to current season only (defenses change year to year)
+        if current_season_only:
+            query = query.filter(TeamStats.season == current_season)
+
+        stats = query.order_by(TeamStats.week.desc()).all()
 
         if not stats:
+            # No stats available for this team/season
             return None, None
 
+        # Extract values based on stat type
         if stat_type == 'passing':
             values = [s.passing_yards_against or 0 for s in stats]
         elif stat_type == 'rushing':
@@ -227,15 +245,20 @@ class PredictionService:
             }
 
         # Get opponent defensive stats (points allowed as proxy for TD defense)
+        # Use current season only since defenses fluctuate year to year
         team = Team.query.filter_by(team_abbr=opponent_team).first()
         if team:
+            # Get current season
+            # Note: For development/testing, using 2024 season
+            # In production, this would dynamically determine the current season
+            current_season = 2024  # TODO: Make this dynamic when 2025 data is available
+
+            # Query current season defensive stats only
             recent_stats = TeamStats.query.filter(
                 TeamStats.team_id == team.id,
+                TeamStats.season == current_season,
                 TeamStats.week.isnot(None)
-            ).order_by(
-                TeamStats.season.desc(),
-                TeamStats.week.desc()
-            ).limit(5).all()
+            ).order_by(TeamStats.week.desc()).all()
 
             if recent_stats:
                 avg_points_allowed = np.mean([s.points_against or 0 for s in recent_stats])

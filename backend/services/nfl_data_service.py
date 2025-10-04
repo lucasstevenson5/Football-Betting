@@ -63,6 +63,7 @@ class NFLDataService:
     def fetch_team_stats(seasons):
         """
         Fetch team defensive statistics for given seasons
+        Uses schedules for points allowed and PBP for yards allowed
 
         Args:
             seasons: List of years to fetch data for
@@ -71,16 +72,60 @@ class NFLDataService:
             DataFrame with team defensive statistics
         """
         try:
-            print(f"Fetching team stats for seasons: {seasons}")
+            print(f"Fetching team defensive stats for seasons: {seasons}")
 
-            # Fetch weekly team stats
-            team_stats = nfl.import_weekly_data(seasons, downcast=True)
+            # Get schedules for points allowed
+            schedules = nfl.import_schedules(seasons)
 
-            # Aggregate defensive stats by team
-            # Group by season, week, and opponent to get points/yards allowed
+            # Get PBP data for yards allowed
+            pbp = nfl.import_pbp_data(seasons, downcast=True)
 
-            print(f"Fetched team stats")
-            return team_stats
+            all_team_stats = []
+
+            # Get all unique teams
+            teams = pd.concat([schedules['home_team'], schedules['away_team']]).unique()
+
+            for team in teams:
+                # Calculate points allowed from schedules
+                # When team is home, they allowed away_score
+                home_games = schedules[schedules['home_team'] == team][
+                    ['season', 'week', 'away_team', 'away_score']
+                ].rename(columns={'away_team': 'opponent', 'away_score': 'points_allowed'})
+
+                # When team is away, they allowed home_score
+                away_games = schedules[schedules['away_team'] == team][
+                    ['season', 'week', 'home_team', 'home_score']
+                ].rename(columns={'home_team': 'opponent', 'home_score': 'points_allowed'})
+
+                points_allowed = pd.concat([home_games, away_games])
+                points_allowed['team'] = team
+
+                # Calculate yards allowed from PBP (when team is on defense)
+                yards_allowed = pbp[pbp['defteam'] == team].groupby(['season', 'week', 'posteam']).agg({
+                    'yards_gained': 'sum',
+                    'passing_yards': 'sum',
+                    'rushing_yards': 'sum'
+                }).reset_index()
+
+                yards_allowed.columns = ['season', 'week', 'opponent', 'yards_allowed',
+                                        'passing_yards_allowed', 'rushing_yards_allowed']
+                yards_allowed['team'] = team
+
+                # Merge points and yards
+                team_stats = pd.merge(
+                    points_allowed,
+                    yards_allowed,
+                    on=['season', 'week', 'opponent', 'team'],
+                    how='outer'
+                )
+
+                all_team_stats.append(team_stats)
+
+            # Combine all teams
+            combined_stats = pd.concat(all_team_stats, ignore_index=True)
+
+            print(f"Fetched defensive stats for {len(teams)} teams, {len(combined_stats)} total records")
+            return combined_stats
 
         except Exception as e:
             print(f"Error fetching team stats: {e}")
@@ -200,6 +245,107 @@ class NFLDataService:
             raise
 
     @staticmethod
+    def import_teams_to_db():
+        """
+        Import NFL teams to database
+        Uses nfl_data_py's team descriptions
+        """
+        try:
+            # Get team descriptions
+            teams_df = nfl.import_team_desc()
+
+            imported_count = 0
+            updated_count = 0
+
+            for _, row in teams_df.iterrows():
+                # Check if team already exists
+                team = Team.query.filter_by(team_abbr=row['team_abbr']).first()
+
+                if team:
+                    # Update existing team
+                    team.team_name = row['team_name']
+                    updated_count += 1
+                else:
+                    # Create new team
+                    team = Team(
+                        team_abbr=row['team_abbr'],
+                        team_name=row['team_name']
+                    )
+                    db.session.add(team)
+                    imported_count += 1
+
+            db.session.commit()
+            print(f"Imported {imported_count} new teams, updated {updated_count} existing teams")
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error importing teams: {e}")
+            raise
+
+    @staticmethod
+    def import_team_stats_to_db(team_stats_df):
+        """
+        Import team defensive statistics to database
+
+        Args:
+            team_stats_df: DataFrame containing team defensive stats
+        """
+        try:
+            imported_count = 0
+            updated_count = 0
+
+            for _, row in team_stats_df.iterrows():
+                # Find the team in our database
+                team = Team.query.filter_by(team_abbr=row['team']).first()
+
+                if not team:
+                    print(f"Warning: Team {row['team']} not found in database, skipping stats")
+                    continue
+
+                # Check if stats already exist for this team/season/week
+                existing_stat = TeamStats.query.filter_by(
+                    team_id=team.id,
+                    season=row['season'],
+                    week=row['week'],
+                    opponent=row['opponent']
+                ).first()
+
+                if existing_stat:
+                    # Update existing stats
+                    existing_stat.points_against = row.get('points_allowed', 0) or 0
+                    existing_stat.yards_against = row.get('yards_allowed', 0) or 0
+                    existing_stat.passing_yards_against = row.get('passing_yards_allowed', 0) or 0
+                    existing_stat.rushing_yards_against = row.get('rushing_yards_allowed', 0) or 0
+                    updated_count += 1
+                else:
+                    # Create new stat record
+                    stat = TeamStats(
+                        team_id=team.id,
+                        season=int(row['season']),
+                        week=int(row['week']) if pd.notna(row['week']) else None,
+                        points_against=row.get('points_allowed', 0) or 0,
+                        yards_against=row.get('yards_allowed', 0) or 0,
+                        passing_yards_against=row.get('passing_yards_allowed', 0) or 0,
+                        rushing_yards_against=row.get('rushing_yards_allowed', 0) or 0,
+                        opponent=row.get('opponent', None)
+                    )
+                    db.session.add(stat)
+                    imported_count += 1
+
+                # Commit in batches to improve performance
+                if (imported_count + updated_count) % 100 == 0:
+                    db.session.commit()
+
+            # Final commit
+            db.session.commit()
+            print(f"Imported {imported_count} new team stat records, updated {updated_count} existing records")
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error importing team stats: {e}")
+            raise
+
+    @staticmethod
     def sync_all_data(years=5):
         """
         Main method to sync all NFL data to database
@@ -211,16 +357,28 @@ class NFLDataService:
             seasons = NFLDataService.get_available_seasons(years)
             print(f"Starting data sync for seasons: {seasons}")
 
+            # Import teams first
+            print("Importing teams...")
+            NFLDataService.import_teams_to_db()
+
             # Fetch player stats
             player_stats = NFLDataService.fetch_player_stats(seasons)
 
-            # Import players first
+            # Import players
             print("Importing players...")
             NFLDataService.import_players_to_db(player_stats)
 
             # Import player stats
             print("Importing player statistics...")
             NFLDataService.import_player_stats_to_db(player_stats)
+
+            # Fetch team defensive stats
+            print("Fetching team defensive statistics...")
+            team_stats = NFLDataService.fetch_team_stats(seasons)
+
+            # Import team stats
+            print("Importing team defensive statistics...")
+            NFLDataService.import_team_stats_to_db(team_stats)
 
             print("Data sync completed successfully!")
 
