@@ -208,6 +208,14 @@ def get_current_season_players():
         else:
             current_season = current_year - 1
 
+        # Check if current season has data, fallback to latest available
+        season_check = PlayerStats.query.filter_by(season=current_season).first()
+        if not season_check:
+            # Get the latest season with data
+            latest_season = db.session.query(func.max(PlayerStats.season)).scalar()
+            if latest_season:
+                current_season = latest_season
+
         # Get query parameters
         position = request.args.get('position')
         limit = request.args.get('limit', 50, type=int)
