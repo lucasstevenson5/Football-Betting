@@ -86,6 +86,14 @@ def get_player_stats_from_game(event_id, week):
 
     return players
 
+def normalize_team_abbr(team):
+    """Normalize team abbreviations to match historical data"""
+    team_mappings = {
+        'LAR': 'LA',  # Rams
+        'WSH': 'WAS',  # Washington (if needed)
+    }
+    return team_mappings.get(team, team)
+
 def import_2025_week(week):
     """Import all player stats for a specific week"""
     print(f"\nProcessing Week {week}...")
@@ -117,8 +125,45 @@ def import_2025_week(week):
     imported = 0
     for player_data in all_players.values():
         try:
-            player_id_str = f"ESPN_{player_data['espn_id']}"
-            player = Player.query.filter_by(player_id=player_id_str).first()
+            # Match existing players by name (ignoring team for players who may have been traded)
+            name = player_data['name']
+            team = player_data['team']
+            normalized_team = normalize_team_abbr(team)
+
+            # Strategy: Match by name variations, ignoring team changes
+            # 1. Try exact full name match
+            player = Player.query.filter_by(name=name).first()
+
+            # 2. If no exact match, try matching abbreviated vs full name
+            if not player:
+                last_name = name.split()[-1]
+                first_initial = name[0].upper()
+
+                # Find all players with matching last name
+                candidates = Player.query.filter(
+                    Player.name.like(f'%{last_name}')
+                ).all()
+
+                # Filter by first initial
+                matching_candidates = [c for c in candidates if c.name[0].upper() == first_initial]
+
+                # If exactly one match, use it
+                if len(matching_candidates) == 1:
+                    player = matching_candidates[0]
+                # If multiple matches, prefer same team (accounting for team abbr variations)
+                elif len(matching_candidates) > 1:
+                    # First try normalized team
+                    team_match = next((c for c in matching_candidates if c.team == normalized_team), None)
+                    if team_match:
+                        player = team_match
+                    # Try original team
+                    elif normalized_team != team:
+                        team_match = next((c for c in matching_candidates if c.team == team), None)
+                        if team_match:
+                            player = team_match
+                    # If no team match, just use the first candidate (player likely changed teams)
+                    else:
+                        player = matching_candidates[0]
 
             # Determine position (WR, RB, TE) based on stats
             stats = player_data['stats']
@@ -128,6 +173,8 @@ def import_2025_week(week):
                 position = 'RB'
 
             if not player:
+                # Create new player only if we couldn't match
+                player_id_str = f"ESPN_{player_data['espn_id']}"
                 player = Player(
                     player_id=player_id_str,
                     name=player_data['name'],

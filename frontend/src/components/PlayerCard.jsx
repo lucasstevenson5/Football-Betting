@@ -1,7 +1,7 @@
 import React from 'react';
 import './PlayerCard.css';
 
-const PlayerCard = ({ player }) => {
+const PlayerCard = ({ player, onClick }) => {
   const stats = player.current_season_stats || {};
 
   const totalTouchdowns =
@@ -10,7 +10,7 @@ const PlayerCard = ({ player }) => {
     (stats.total_receiving_yards || 0) + (stats.total_rushing_yards || 0);
 
   return (
-    <div className="player-card">
+    <div className="player-card" onClick={() => onClick(player.id)}>
       <div className="player-header">
         <div className="player-info">
           <h3 className="player-name">{player.name}</h3>

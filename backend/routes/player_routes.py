@@ -3,6 +3,7 @@ from models.player import Player, PlayerStats
 from models import db
 from datetime import datetime
 from sqlalchemy import func
+import numpy as np
 
 player_bp = Blueprint('players', __name__, url_prefix='/api/players')
 
@@ -178,6 +179,100 @@ def get_player_stats_summary(player_id):
                     'rushing_yards_per_game': round(summary.avg_rushing_yards or 0, 2)
                 }
             }
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@player_bp.route('/<int:player_id>/career', methods=['GET'])
+def get_player_career_stats(player_id):
+    """
+    Get complete career statistics for a player across all seasons
+    Includes per-season stats, career totals, averages, and standard deviations
+    """
+    try:
+        player = Player.query.get_or_404(player_id)
+
+        # Get stats grouped by season
+        season_stats = db.session.query(
+            PlayerStats.season,
+            func.count(PlayerStats.id).label('games_played'),
+            func.sum(PlayerStats.receptions).label('total_receptions'),
+            func.sum(PlayerStats.receiving_yards).label('total_receiving_yards'),
+            func.sum(PlayerStats.receiving_touchdowns).label('total_receiving_tds'),
+            func.sum(PlayerStats.rushes).label('total_rushes'),
+            func.sum(PlayerStats.rushing_yards).label('total_rushing_yards'),
+            func.sum(PlayerStats.rushing_touchdowns).label('total_rushing_tds'),
+            func.sum(PlayerStats.targets).label('total_targets')
+        ).filter(
+            PlayerStats.player_id == player_id,
+            PlayerStats.week.isnot(None)
+        ).group_by(PlayerStats.season).order_by(PlayerStats.season.desc()).all()
+
+        # Get all weekly stats for standard deviation calculations
+        all_stats = PlayerStats.query.filter(
+            PlayerStats.player_id == player_id,
+            PlayerStats.week.isnot(None)
+        ).all()
+
+        # Calculate arrays for standard deviation
+        rushing_yards_list = [s.rushing_yards or 0 for s in all_stats]
+        receiving_yards_list = [s.receiving_yards or 0 for s in all_stats]
+        rushing_td_list = [s.rushing_touchdowns or 0 for s in all_stats]
+        receiving_td_list = [s.receiving_touchdowns or 0 for s in all_stats]
+        total_td_list = [(s.rushing_touchdowns or 0) + (s.receiving_touchdowns or 0) for s in all_stats]
+
+        # Format season-by-season data
+        seasons_data = []
+        for season in season_stats:
+            seasons_data.append({
+                'season': season.season,
+                'games_played': season.games_played,
+                'totals': {
+                    'receptions': season.total_receptions or 0,
+                    'receiving_yards': season.total_receiving_yards or 0,
+                    'receiving_touchdowns': season.total_receiving_tds or 0,
+                    'rushes': season.total_rushes or 0,
+                    'rushing_yards': season.total_rushing_yards or 0,
+                    'rushing_touchdowns': season.total_rushing_tds or 0,
+                    'targets': season.total_targets or 0
+                },
+                'averages': {
+                    'receiving_yards_per_game': round((season.total_receiving_yards or 0) / season.games_played, 2) if season.games_played > 0 else 0,
+                    'rushing_yards_per_game': round((season.total_rushing_yards or 0) / season.games_played, 2) if season.games_played > 0 else 0,
+                    'total_touchdowns_per_game': round(((season.total_receiving_tds or 0) + (season.total_rushing_tds or 0)) / season.games_played, 2) if season.games_played > 0 else 0
+                }
+            })
+
+        # Calculate career totals and statistics
+        total_games = len(all_stats)
+        career_stats = {
+            'total_games': total_games,
+            'averages': {
+                'rushing_yards_per_game': round(np.mean(rushing_yards_list), 2) if rushing_yards_list else 0,
+                'receiving_yards_per_game': round(np.mean(receiving_yards_list), 2) if receiving_yards_list else 0,
+                'rushing_touchdowns_per_game': round(np.mean(rushing_td_list), 2) if rushing_td_list else 0,
+                'receiving_touchdowns_per_game': round(np.mean(receiving_td_list), 2) if receiving_td_list else 0,
+                'total_touchdowns_per_game': round(np.mean(total_td_list), 2) if total_td_list else 0
+            },
+            'standard_deviations': {
+                'rushing_yards': round(np.std(rushing_yards_list), 2) if len(rushing_yards_list) > 1 else 0,
+                'receiving_yards': round(np.std(receiving_yards_list), 2) if len(receiving_yards_list) > 1 else 0,
+                'rushing_touchdowns': round(np.std(rushing_td_list), 2) if len(rushing_td_list) > 1 else 0,
+                'receiving_touchdowns': round(np.std(receiving_td_list), 2) if len(receiving_td_list) > 1 else 0,
+                'total_touchdowns': round(np.std(total_td_list), 2) if len(total_td_list) > 1 else 0
+            }
+        }
+
+        return jsonify({
+            'success': True,
+            'player': player.to_dict(),
+            'seasons': seasons_data,
+            'career_stats': career_stats
         }), 200
 
     except Exception as e:

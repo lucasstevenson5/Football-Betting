@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import PlayerCard from './PlayerCard';
+import PlayerDetail from './PlayerDetail';
 import './PlayerList.css';
 
 const PlayerList = () => {
@@ -12,6 +13,7 @@ const PlayerList = () => {
   const [availableSeasons, setAvailableSeasons] = useState([]);
   const [limit, setLimit] = useState(20);
   const [sortBy, setSortBy] = useState('receiving_yards');
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null);
 
   // Fetch available seasons on mount
   useEffect(() => {
@@ -173,10 +175,21 @@ const PlayerList = () => {
           </div>
           <div className="players-grid">
             {players.map((player) => (
-              <PlayerCard key={player.id} player={player} />
+              <PlayerCard
+                key={player.id}
+                player={player}
+                onClick={(playerId) => setSelectedPlayerId(playerId)}
+              />
             ))}
           </div>
         </>
+      )}
+
+      {selectedPlayerId && (
+        <PlayerDetail
+          playerId={selectedPlayerId}
+          onClose={() => setSelectedPlayerId(null)}
+        />
       )}
     </div>
   );

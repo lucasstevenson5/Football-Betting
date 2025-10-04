@@ -27,6 +27,8 @@ export const apiService = {
     api.get(`/players/${playerId}/stats`, { params }),
   getPlayerStatsSummary: (playerId, params = {}) =>
     api.get(`/players/${playerId}/stats/summary`, { params }),
+  getPlayerCareerStats: (playerId) =>
+    api.get(`/players/${playerId}/career`),
   getCurrentSeasonPlayers: (params = {}) =>
     api.get('/players/current-season', { params }),
 };
