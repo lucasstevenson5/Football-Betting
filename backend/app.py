@@ -4,6 +4,7 @@ from config import Config
 from models import db
 from routes.player_routes import player_bp
 from routes.data_routes import data_bp
+from routes.prediction_routes import prediction_bp
 import schedule
 import time
 import threading
@@ -23,6 +24,7 @@ def create_app():
     # Register blueprints
     app.register_blueprint(player_bp)
     app.register_blueprint(data_bp)
+    app.register_blueprint(prediction_bp)
 
     # Create tables
     with app.app_context():
