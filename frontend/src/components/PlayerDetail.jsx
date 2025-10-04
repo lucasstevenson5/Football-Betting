@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
+import PredictionDisplay from './PredictionDisplay';
 import './PlayerDetail.css';
 
 const PlayerDetail = ({ playerId, onClose }) => {
@@ -161,6 +162,13 @@ const PlayerDetail = ({ playerId, onClose }) => {
             </div>
           ))}
         </div>
+
+        {/* Prediction Section */}
+        <PredictionDisplay
+          playerId={player.id}
+          playerName={player.name}
+          playerTeam={player.team}
+        />
       </div>
     </div>
   );

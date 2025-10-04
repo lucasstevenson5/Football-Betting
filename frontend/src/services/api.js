@@ -31,6 +31,14 @@ export const apiService = {
     api.get(`/players/${playerId}/career`),
   getCurrentSeasonPlayers: (params = {}) =>
     api.get('/players/current-season', { params }),
+
+  // Predictions
+  getPlayerPrediction: (playerId, opponent) =>
+    api.get(`/predictions/player/${playerId}`, { params: { opponent } }),
+  getYardagePrediction: (playerId, opponent, statType = 'receiving_yards') =>
+    api.get(`/predictions/yardage/${playerId}`, { params: { opponent, stat_type: statType } }),
+  getTouchdownPrediction: (playerId, opponent) =>
+    api.get(`/predictions/touchdown/${playerId}`, { params: { opponent } }),
 };
 
 export default api;

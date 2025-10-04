@@ -1,0 +1,274 @@
+.prediction-section {
+  margin-top: 30px;
+  padding-top: 30px;
+  border-top: 2px solid #e5e7eb;
+}
+
+.prediction-section h3 {
+  margin: 0 0 20px 0;
+  font-size: 24px;
+  color: #333;
+}
+
+.opponent-selector {
+  margin-bottom: 25px;
+}
+
+.opponent-selector label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 8px;
+}
+
+.opponent-select {
+  width: 100%;
+  max-width: 300px;
+  padding: 10px 12px;
+  font-size: 15px;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.opponent-select:hover {
+  border-color: #9ca3af;
+}
+
+.opponent-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.prediction-loading {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 30px;
+  color: #666;
+}
+
+.spinner-small {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.prediction-error {
+  padding: 15px;
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #dc2626;
+  font-size: 14px;
+}
+
+.predictions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.prediction-card {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.prediction-card h4 {
+  margin: 0 0 15px 0;
+  font-size: 18px;
+  color: #374151;
+  font-weight: 600;
+}
+
+/* Yardage Predictions */
+.projection-summary {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.projection-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.projection-item .label {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.projection-item .value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.probability-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.probability-item {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.probability-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.probability-bar-container {
+  position: relative;
+  height: 28px;
+  background-color: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.probability-bar {
+  height: 100%;
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.probability-value {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* Touchdown Prediction */
+.td-probability-display {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.td-probability-circle {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.td-probability-inner {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.td-prob-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.td-prob-label {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.td-stats {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.td-stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: white;
+  border-radius: 6px;
+}
+
+.td-stat-label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.td-stat-value {
+  font-size: 16px;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+/* Prediction Info */
+.prediction-info {
+  margin-top: 10px;
+}
+
+.info-text {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0;
+  padding: 12px;
+  background-color: #f3f4f6;
+  border-radius: 6px;
+}
+
+.info-text strong {
+  color: #374151;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .projection-summary {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .td-probability-display {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .probability-item {
+    grid-template-columns: 80px 1fr;
+  }
+
+  .opponent-select {
+    max-width: 100%;
+  }
+}
