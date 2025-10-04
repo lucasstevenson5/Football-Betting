@@ -52,6 +52,11 @@ const PlayerList = () => {
         sort_by: sortBy,
       };
 
+      // Add selected season to params
+      if (selectedSeason) {
+        params.season = selectedSeason;
+      }
+
       if (selectedPosition !== 'ALL') {
         params.position = selectedPosition;
       }

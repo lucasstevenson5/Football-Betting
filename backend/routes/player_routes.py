@@ -193,33 +193,40 @@ def get_current_season_players():
     Get all players with stats from current season
     Returns players sorted by total fantasy points or specified stat
     Query params:
+        - season: Specific season year (optional, defaults to current)
         - position: Filter by position
         - limit: Number of players to return (default: 50)
         - sort_by: Stat to sort by (default: receiving_yards)
     """
     try:
-        # Determine current season
-        current_year = datetime.now().year
-        current_month = datetime.now().month
-        if current_month >= 9:
-            current_season = current_year
-        elif current_month < 3:
-            current_season = current_year - 1
-        else:
-            current_season = current_year - 1
-
-        # Check if current season has data, fallback to latest available
-        season_check = PlayerStats.query.filter_by(season=current_season).first()
-        if not season_check:
-            # Get the latest season with data
-            latest_season = db.session.query(func.max(PlayerStats.season)).scalar()
-            if latest_season:
-                current_season = latest_season
-
         # Get query parameters
         position = request.args.get('position')
         limit = request.args.get('limit', 50, type=int)
         sort_by = request.args.get('sort_by', 'receiving_yards')
+        requested_season = request.args.get('season', type=int)
+
+        # Determine season to use
+        if requested_season:
+            # Use the requested season
+            current_season = requested_season
+        else:
+            # Determine current season
+            current_year = datetime.now().year
+            current_month = datetime.now().month
+            if current_month >= 9:
+                current_season = current_year
+            elif current_month < 3:
+                current_season = current_year - 1
+            else:
+                current_season = current_year - 1
+
+            # Check if current season has data, fallback to latest available
+            season_check = PlayerStats.query.filter_by(season=current_season).first()
+            if not season_check:
+                # Get the latest season with data
+                latest_season = db.session.query(func.max(PlayerStats.season)).scalar()
+                if latest_season:
+                    current_season = latest_season
 
         # Map sort_by to actual column
         sort_column_map = {
