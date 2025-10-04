@@ -12,15 +12,20 @@ class NFLDataService:
     def get_available_seasons(years=5):
         """Get list of seasons to fetch (last 5 years including current)"""
         current_year = datetime.now().year
-        # NFL season typically runs Aug-Feb, so if we're before August, use previous year as current season
         current_month = datetime.now().month
-        if current_month < 3:  # If before March, previous season is still ongoing
-            current_year -= 1
 
-        # The data is for the year the season started (e.g., 2024 season = 2024-2025)
-        # Only fetch up to last complete year to avoid 404 errors
-        # Since we're in 2025 but 2024 season is the latest available
-        current_season = current_year - 1  # Use previous year to be safe
+        # NFL season runs from September to February
+        # If we're in September or later, the new season has started
+        # If we're before March, the previous season is still ongoing
+        if current_month >= 9:
+            # New season has started (e.g., September 2025 = 2025 season)
+            current_season = current_year
+        elif current_month < 3:
+            # Still in previous season (e.g., January 2025 = 2024 season)
+            current_season = current_year - 1
+        else:
+            # Off-season, use previous completed season
+            current_season = current_year - 1
 
         return list(range(current_season - years + 1, current_season + 1))
 

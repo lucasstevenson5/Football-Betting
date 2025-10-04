@@ -8,12 +8,39 @@ const PlayerList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedPosition, setSelectedPosition] = useState('ALL');
+  const [selectedSeason, setSelectedSeason] = useState(null);
+  const [availableSeasons, setAvailableSeasons] = useState([]);
   const [limit, setLimit] = useState(20);
   const [sortBy, setSortBy] = useState('receiving_yards');
 
+  // Fetch available seasons on mount
   useEffect(() => {
-    fetchPlayers();
-  }, [selectedPosition, limit, sortBy]);
+    fetchAvailableSeasons();
+  }, []);
+
+  // Fetch players when filters change
+  useEffect(() => {
+    if (selectedSeason) {
+      fetchPlayers();
+    }
+  }, [selectedPosition, limit, sortBy, selectedSeason]);
+
+  const fetchAvailableSeasons = async () => {
+    try {
+      const response = await apiService.getDataStatus();
+      const seasons = response.data.data.seasons_available;
+      setAvailableSeasons(seasons);
+      if (seasons.length > 0) {
+        setSelectedSeason(seasons[0]); // Default to most recent season
+      }
+    } catch (err) {
+      console.error('Error fetching seasons:', err);
+      // Fallback to current year if API fails
+      const currentYear = new Date().getFullYear();
+      setAvailableSeasons([currentYear]);
+      setSelectedSeason(currentYear);
+    }
+  };
 
   const fetchPlayers = async () => {
     try {
@@ -44,11 +71,27 @@ const PlayerList = () => {
   return (
     <div className="player-list-container">
       <header className="player-list-header">
-        <h1>NFL Player Statistics - 2024 Season</h1>
-        <p className="subtitle">Current season stats for top performers</p>
+        <h1>NFL Player Statistics</h1>
+        <p className="subtitle">View stats by season for top performers</p>
       </header>
 
       <div className="filters">
+        <div className="filter-group">
+          <label htmlFor="season-select">Season:</label>
+          <select
+            id="season-select"
+            value={selectedSeason || ''}
+            onChange={(e) => setSelectedSeason(Number(e.target.value))}
+            className="filter-select season-select"
+          >
+            {availableSeasons.map((season) => (
+              <option key={season} value={season}>
+                {season} Season
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="filter-group">
           <label>Position:</label>
           <div className="position-buttons">
@@ -118,11 +161,17 @@ const PlayerList = () => {
       )}
 
       {!loading && !error && players.length > 0 && (
-        <div className="players-grid">
-          {players.map((player) => (
-            <PlayerCard key={player.id} player={player} />
-          ))}
-        </div>
+        <>
+          <div className="season-info">
+            <h2>{selectedSeason} Season Leaders</h2>
+            <p>{players.length} players shown</p>
+          </div>
+          <div className="players-grid">
+            {players.map((player) => (
+              <PlayerCard key={player.id} player={player} />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

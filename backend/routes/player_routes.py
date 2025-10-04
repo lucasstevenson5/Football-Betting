@@ -84,8 +84,10 @@ def get_player_stats(player_id):
         if not season:
             current_year = datetime.now().year
             current_month = datetime.now().month
-            if current_month < 3:
-                season = current_year - 2
+            if current_month >= 9:
+                season = current_year
+            elif current_month < 3:
+                season = current_year - 1
             else:
                 season = current_year - 1
 
@@ -129,8 +131,10 @@ def get_player_stats_summary(player_id):
         if not season:
             current_year = datetime.now().year
             current_month = datetime.now().month
-            if current_month < 3:
-                season = current_year - 2
+            if current_month >= 9:
+                season = current_year
+            elif current_month < 3:
+                season = current_year - 1
             else:
                 season = current_year - 1
 
@@ -195,11 +199,12 @@ def get_current_season_players():
     """
     try:
         # Determine current season
-        # Use 2024 as the latest available season (adjust as needed)
         current_year = datetime.now().year
         current_month = datetime.now().month
-        if current_month < 3:  # If before March, use previous year
-            current_season = current_year - 2
+        if current_month >= 9:
+            current_season = current_year
+        elif current_month < 3:
+            current_season = current_year - 1
         else:
             current_season = current_year - 1
 
