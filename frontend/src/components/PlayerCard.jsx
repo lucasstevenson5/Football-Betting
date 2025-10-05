@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './PlayerCard.css';
+import { getTeamColor, getTeamSecondaryColor } from '../utils/teamColors';
 
 const PlayerCard = ({ player, onClick }) => {
+  const [showStats, setShowStats] = useState(false);
+  const [hoverTimer, setHoverTimer] = useState(null);
   const stats = player.current_season_stats || {};
 
   const totalTouchdowns =
@@ -9,8 +12,42 @@ const PlayerCard = ({ player, onClick }) => {
   const totalYards =
     (stats.total_receiving_yards || 0) + (stats.total_rushing_yards || 0);
 
+  const teamColor = getTeamColor(player.team);
+  const teamSecondaryColor = getTeamSecondaryColor(player.team);
+
+  const handleMouseEnter = () => {
+    const timer = setTimeout(() => {
+      setShowStats(true);
+    }, 1000); // 1 second delay
+    setHoverTimer(timer);
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimer) {
+      clearTimeout(hoverTimer);
+    }
+    setShowStats(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimer) {
+        clearTimeout(hoverTimer);
+      }
+    };
+  }, [hoverTimer]);
+
   return (
-    <div className="player-card" onClick={() => onClick(player.id)}>
+    <div
+      className="player-card"
+      style={{
+        background: `linear-gradient(135deg, ${teamColor} 0%, ${teamColor}dd 100%)`,
+        color: 'white'
+      }}
+      onClick={() => onClick(player.id)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <div className="player-header">
         <div className="player-info">
           <h3 className="player-name">{player.name}</h3>
@@ -23,7 +60,8 @@ const PlayerCard = ({ player, onClick }) => {
         </div>
       </div>
 
-      <div className="player-stats">
+      {showStats && (
+        <div className="player-stats">
         <div className="stat-group">
           <div className="stat">
             <span className="stat-label">Games</span>
@@ -78,7 +116,8 @@ const PlayerCard = ({ player, onClick }) => {
             </div>
           </div>
         ) : null}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

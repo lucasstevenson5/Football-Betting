@@ -20,6 +20,17 @@ const PlayerList = () => {
     fetchAvailableSeasons();
   }, []);
 
+  // Update sortBy when position changes
+  useEffect(() => {
+    if (selectedPosition === 'QB') {
+      setSortBy('passing_yards');
+    } else if (selectedPosition === 'RB') {
+      setSortBy('rushing_yards');
+    } else {
+      setSortBy('receiving_yards');
+    }
+  }, [selectedPosition]);
+
   // Fetch players when filters change
   useEffect(() => {
     if (selectedSeason) {

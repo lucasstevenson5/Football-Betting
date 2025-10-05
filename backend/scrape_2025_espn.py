@@ -230,6 +230,13 @@ def import_2025_week(week):
                 )
                 db.session.add(player)
                 db.session.flush()
+            else:
+                # Update existing player with full name from ESPN and current team
+                player.name = player_data['name']
+                player.team = player_data['team']
+                # Only update position if ESPN provided a valid position (not inferred)
+                if espn_position in ['QB', 'RB', 'WR', 'TE']:
+                    player.position = position
 
             # Add/update stats for this week
             week_stat = PlayerStats.query.filter_by(
