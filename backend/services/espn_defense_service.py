@@ -23,14 +23,14 @@ class ESPNDefenseService:
     @staticmethod
     def fetch_week_scores(season=2025, week=1):
         """
-        Fetch scores for a specific week from ESPN scoreboard
+        Fetch scores and game IDs for a specific week from ESPN scoreboard
 
         Args:
             season: NFL season year
             week: Week number
 
         Returns:
-            List of game dictionaries with team scores
+            List of game dictionaries with team scores and game IDs
         """
         url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
 
@@ -48,13 +48,16 @@ class ESPNDefenseService:
                 games = []
                 if 'events' in data:
                     for event in data['events']:
+                        game_id = event.get('id')
+
                         if 'competitions' in event:
                             comp = event['competitions'][0]
 
                             if 'competitors' in comp:
                                 game_data = {
                                     'week': week,
-                                    'season': season
+                                    'season': season,
+                                    'game_id': game_id
                                 }
 
                                 for team in comp['competitors']:
@@ -81,9 +84,67 @@ class ESPNDefenseService:
             return []
 
     @staticmethod
+    def fetch_game_boxscore(game_id):
+        """
+        Fetch detailed boxscore for a game to get yards statistics
+
+        Args:
+            game_id: ESPN game ID
+
+        Returns:
+            Dictionary with team statistics (yards allowed calculated from opponent's offensive yards)
+        """
+        url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary"
+        params = {'event': game_id}
+
+        try:
+            response = requests.get(url, params=params, timeout=10)
+
+            if response.status_code == 200:
+                data = response.json()
+
+                team_stats = {}
+
+                if 'boxscore' in data and 'teams' in data['boxscore']:
+                    for team in data['boxscore']['teams']:
+                        team_abbr = team.get('team', {}).get('abbreviation')
+                        stats = team.get('statistics', [])
+
+                        # Extract key stats
+                        total_yards = 0
+                        passing_yards = 0
+                        rushing_yards = 0
+
+                        for stat in stats:
+                            name = stat.get('name', '')
+                            value = stat.get('displayValue', '0')
+
+                            if name == 'totalYards':
+                                total_yards = int(value)
+                            elif name == 'netPassingYards':
+                                passing_yards = int(value)
+                            elif name == 'rushingYards':
+                                rushing_yards = int(value)
+
+                        team_stats[team_abbr] = {
+                            'total_yards': total_yards,
+                            'passing_yards': passing_yards,
+                            'rushing_yards': rushing_yards
+                        }
+
+                return team_stats
+
+            else:
+                return {}
+
+        except Exception as e:
+            print(f"Exception fetching game {game_id} boxscore: {e}")
+            return {}
+
+    @staticmethod
     def calculate_defensive_stats(season=2025, weeks=None):
         """
-        Calculate defensive statistics from game scores
+        Calculate defensive statistics from game scores and boxscores
 
         Args:
             season: NFL season year
@@ -103,22 +164,37 @@ class ESPNDefenseService:
             games = ESPNDefenseService.fetch_week_scores(season=season, week=week)
 
             for game in games:
-                # Home team defense (allowed away_score points)
+                game_id = game.get('game_id')
+
+                # Fetch boxscore for yards data
+                boxscore_stats = ESPNDefenseService.fetch_game_boxscore(game_id) if game_id else {}
+
+                # Get offensive stats for each team (which = yards ALLOWED by opponent's defense)
+                home_offensive = boxscore_stats.get(game['home_team'], {})
+                away_offensive = boxscore_stats.get(game['away_team'], {})
+
+                # Home team defense (allowed away team's offensive yards)
                 home_def = {
                     'season': game['season'],
                     'week': game['week'],
                     'team': game['home_team'],
                     'opponent': game['away_team'],
-                    'points_allowed': game['away_score']
+                    'points_allowed': game['away_score'],
+                    'yards_allowed': away_offensive.get('total_yards', None),
+                    'passing_yards_allowed': away_offensive.get('passing_yards', None),
+                    'rushing_yards_allowed': away_offensive.get('rushing_yards', None)
                 }
 
-                # Away team defense (allowed home_score points)
+                # Away team defense (allowed home team's offensive yards)
                 away_def = {
                     'season': game['season'],
                     'week': game['week'],
                     'team': game['away_team'],
                     'opponent': game['home_team'],
-                    'points_allowed': game['home_score']
+                    'points_allowed': game['home_score'],
+                    'yards_allowed': home_offensive.get('total_yards', None),
+                    'passing_yards_allowed': home_offensive.get('passing_yards', None),
+                    'rushing_yards_allowed': home_offensive.get('rushing_yards', None)
                 }
 
                 all_defensive_stats.append(home_def)

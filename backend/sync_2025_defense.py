@@ -1,6 +1,6 @@
 """
 Sync 2025 NFL defensive statistics from ESPN API
-Uses ESPN scoreboard for points allowed
+Uses ESPN scoreboard for points allowed and game boxscores for yards allowed
 """
 from app import create_app
 from services.espn_defense_service import ESPNDefenseService
@@ -47,8 +47,9 @@ def sync_2025_defense():
             if existing_stat:
                 # Update
                 existing_stat.points_against = row['points_allowed']
-                # Note: yards data not available from ESPN scoreboard
-                # Would need to fetch from play-by-play API
+                existing_stat.yards_against = row.get('yards_allowed')
+                existing_stat.passing_yards_against = row.get('passing_yards_allowed')
+                existing_stat.rushing_yards_against = row.get('rushing_yards_allowed')
                 updated_count += 1
             else:
                 # Create new
@@ -58,10 +59,9 @@ def sync_2025_defense():
                     week=int(row['week']),
                     opponent=row['opponent'],
                     points_against=row['points_allowed'],
-                    # Yards will be null - would need additional API calls
-                    yards_against=None,
-                    passing_yards_against=None,
-                    rushing_yards_against=None
+                    yards_against=row.get('yards_allowed'),
+                    passing_yards_against=row.get('passing_yards_allowed'),
+                    rushing_yards_against=row.get('rushing_yards_allowed')
                 )
                 db.session.add(stat)
                 imported_count += 1
@@ -76,20 +76,23 @@ def sync_2025_defense():
         print(f"\nImported {imported_count} new records, updated {updated_count} existing records")
 
         # Show summary
-        print("\n2025 Defensive Stats Summary (Points Allowed):")
+        print("\n2025 Defensive Stats Summary:")
         teams = db.session.query(
             Team.team_abbr,
-            db.func.avg(TeamStats.points_against).label('avg_points')
+            db.func.avg(TeamStats.points_against).label('avg_points'),
+            db.func.avg(TeamStats.yards_against).label('avg_yards'),
+            db.func.avg(TeamStats.passing_yards_against).label('avg_pass_yds'),
+            db.func.avg(TeamStats.rushing_yards_against).label('avg_rush_yds')
         ).join(TeamStats).filter(
             TeamStats.season == 2025
         ).group_by(Team.team_abbr).order_by(
             db.func.avg(TeamStats.points_against)
         ).all()
 
-        print(f"{'Team':<6} {'Avg Points Allowed':<20}")
-        print("-" * 30)
-        for team_abbr, avg_pts in teams:
-            print(f"{team_abbr:<6} {avg_pts:<20.2f}")
+        print(f"{'Team':<6} {'Pts/G':<8} {'Yds/G':<8} {'Pass/G':<8} {'Rush/G':<8}")
+        print("-" * 50)
+        for team_abbr, avg_pts, avg_yds, avg_pass, avg_rush in teams:
+            print(f"{team_abbr:<6} {avg_pts:<8.1f} {avg_yds:<8.1f} {avg_pass:<8.1f} {avg_rush:<8.1f}")
 
 
 if __name__ == '__main__':

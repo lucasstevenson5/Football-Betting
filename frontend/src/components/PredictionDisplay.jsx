@@ -86,41 +86,94 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
 
       {prediction && !loading && (
         <div className="predictions-container">
-          {/* Yardage Predictions */}
-          <div className="prediction-card yardage-predictions">
-            <h4>Yardage Probabilities</h4>
+          {/* Receiving Predictions */}
+          {prediction.receiving_predictions && (
+            <div className="prediction-card yardage-predictions">
+              <h4>Receiving Yards Probabilities</h4>
 
-            <div className="projection-summary">
-              <div className="projection-item">
-                <span className="label">Projected Yards:</span>
-                <span className="value">{prediction.yardage_predictions.projected_yards}</span>
-              </div>
-              <div className="projection-item">
-                <span className="label">Consistency:</span>
-                <span className="value">{(prediction.yardage_predictions.consistency_score * 100).toFixed(0)}%</span>
-              </div>
-            </div>
-
-            <div className="probability-grid">
-              {Object.entries(prediction.yardage_predictions.probabilities)
-                .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-                .map(([yards, prob]) => (
-                  <div key={yards} className="probability-item">
-                    <div className="probability-label">{yards}+ yards</div>
-                    <div className="probability-bar-container">
-                      <div
-                        className="probability-bar"
-                        style={{
-                          width: `${prob}%`,
-                          backgroundColor: getProbabilityColor(prob)
-                        }}
-                      />
-                      <span className="probability-value">{prob}%</span>
-                    </div>
+              <div className="projection-summary">
+                <div className="projection-item">
+                  <span className="label">Projected:</span>
+                  <span className="value">{prediction.receiving_predictions.projected_yards} yds</span>
+                </div>
+                <div className="projection-item">
+                  <span className="label">Player Avg:</span>
+                  <span className="value">{prediction.receiving_predictions.player_avg} yds</span>
+                </div>
+                {prediction.receiving_predictions.opponent_avg_allowed && (
+                  <div className="projection-item">
+                    <span className="label">Opp Allows:</span>
+                    <span className="value">{prediction.receiving_predictions.opponent_avg_allowed} yds/g</span>
                   </div>
-                ))}
+                )}
+              </div>
+
+              <div className="probability-grid">
+                {Object.entries(prediction.receiving_predictions.probabilities)
+                  .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                  .map(([yards, prob]) => (
+                    <div key={yards} className="probability-item">
+                      <div className="probability-label">{yards}+ yds</div>
+                      <div className="probability-bar-container">
+                        <div
+                          className="probability-bar"
+                          style={{
+                            width: `${prob}%`,
+                            backgroundColor: getProbabilityColor(prob)
+                          }}
+                        />
+                        <span className="probability-value">{prob}%</span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Rushing Predictions */}
+          {prediction.rushing_predictions && prediction.rushing_predictions.player_avg > 0 && (
+            <div className="prediction-card yardage-predictions">
+              <h4>Rushing Yards Probabilities</h4>
+
+              <div className="projection-summary">
+                <div className="projection-item">
+                  <span className="label">Projected:</span>
+                  <span className="value">{prediction.rushing_predictions.projected_yards} yds</span>
+                </div>
+                <div className="projection-item">
+                  <span className="label">Player Avg:</span>
+                  <span className="value">{prediction.rushing_predictions.player_avg} yds</span>
+                </div>
+                {prediction.rushing_predictions.opponent_avg_allowed && (
+                  <div className="projection-item">
+                    <span className="label">Opp Allows:</span>
+                    <span className="value">{prediction.rushing_predictions.opponent_avg_allowed} yds/g</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="probability-grid">
+                {Object.entries(prediction.rushing_predictions.probabilities)
+                  .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                  .filter(([_, prob]) => prob > 0.1) // Only show meaningful probabilities
+                  .map(([yards, prob]) => (
+                    <div key={yards} className="probability-item">
+                      <div className="probability-label">{yards}+ yds</div>
+                      <div className="probability-bar-container">
+                        <div
+                          className="probability-bar"
+                          style={{
+                            width: `${prob}%`,
+                            backgroundColor: getProbabilityColor(prob)
+                          }}
+                        />
+                        <span className="probability-value">{prob}%</span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
 
           {/* Touchdown Prediction */}
           <div className="prediction-card td-prediction">
@@ -158,11 +211,8 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
           {/* Prediction Info */}
           <div className="prediction-info">
             <p className="info-text">
-              <strong>Note:</strong> Predictions use time-weighted historical performance with
-              current season weighted 2x higher. Recent games are prioritized over older data.
-              {prediction.yardage_predictions.opponent_avg_allowed && (
-                <span> Opponent averages {prediction.yardage_predictions.opponent_avg_allowed} yards allowed.</span>
-              )}
+              <strong>2025 Season Data:</strong> Predictions use current season defensive statistics.
+              Time-weighted model prioritizes recent performance with current season weighted 2x higher.
             </p>
           </div>
         </div>
