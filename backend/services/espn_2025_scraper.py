@@ -100,8 +100,8 @@ class ESPN2025Scraper:
             name = athlete.get('displayName', '').replace('.', '')
             position = athlete.get('position', {}).get('abbreviation', '')
 
-            # Only interested in RB, WR, TE
-            if position not in ['RB', 'WR', 'TE']:
+            # Only interested in QB, RB, WR, TE
+            if position not in ['QB', 'RB', 'WR', 'TE']:
                 return None
 
             team_info = athlete.get('team', {})
@@ -132,6 +132,16 @@ class ESPN2025Scraper:
                             stats['rushes'] = int(stat_value)
                         elif 'rushing touchdowns' in stat_name or 'rushing td' in stat_name:
                             stats['rushing_touchdowns'] = int(stat_value)
+                        elif 'passing yards' in stat_name:
+                            stats['passing_yards'] = int(stat_value)
+                        elif 'completions' in stat_name:
+                            stats['passing_completions'] = int(stat_value)
+                        elif 'passing attempts' in stat_name or 'pass attempts' in stat_name:
+                            stats['passing_attempts'] = int(stat_value)
+                        elif 'passing touchdowns' in stat_name or 'passing td' in stat_name:
+                            stats['passing_touchdowns'] = int(stat_value)
+                        elif 'interceptions' in stat_name and 'thrown' in stat_name:
+                            stats['interceptions'] = int(stat_value)
 
             return {
                 'player_id': str(player_id),
@@ -203,6 +213,11 @@ class ESPN2025Scraper:
                         existing_stat.rushes = stats.get('rushes', 0)
                         existing_stat.rushing_yards = stats.get('rushing_yards', 0)
                         existing_stat.rushing_touchdowns = stats.get('rushing_touchdowns', 0)
+                        existing_stat.passing_attempts = stats.get('passing_attempts', 0)
+                        existing_stat.passing_completions = stats.get('passing_completions', 0)
+                        existing_stat.passing_yards = stats.get('passing_yards', 0)
+                        existing_stat.passing_touchdowns = stats.get('passing_touchdowns', 0)
+                        existing_stat.interceptions = stats.get('interceptions', 0)
                     else:
                         # Create new stat record
                         stat = PlayerStats(
@@ -215,7 +230,12 @@ class ESPN2025Scraper:
                             targets=stats.get('targets', 0),
                             rushes=stats.get('rushes', 0),
                             rushing_yards=stats.get('rushing_yards', 0),
-                            rushing_touchdowns=stats.get('rushing_touchdowns', 0)
+                            rushing_touchdowns=stats.get('rushing_touchdowns', 0),
+                            passing_attempts=stats.get('passing_attempts', 0),
+                            passing_completions=stats.get('passing_completions', 0),
+                            passing_yards=stats.get('passing_yards', 0),
+                            passing_touchdowns=stats.get('passing_touchdowns', 0),
+                            interceptions=stats.get('interceptions', 0)
                         )
                         db.session.add(stat)
                         total_stats += 1

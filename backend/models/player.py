@@ -54,6 +54,13 @@ class PlayerStats(db.Model):
     rushing_yards = db.Column(db.Integer, default=0)
     rushing_touchdowns = db.Column(db.Integer, default=0)
 
+    # Passing stats (for QBs)
+    passing_attempts = db.Column(db.Integer, default=0)
+    passing_completions = db.Column(db.Integer, default=0)
+    passing_yards = db.Column(db.Integer, default=0)
+    passing_touchdowns = db.Column(db.Integer, default=0)
+    interceptions = db.Column(db.Integer, default=0)
+
     # Additional context
     opponent = db.Column(db.String(10), nullable=True)
     home_away = db.Column(db.String(4), nullable=True)  # 'HOME' or 'AWAY'
@@ -86,6 +93,11 @@ class PlayerStats(db.Model):
             'rushes': self.rushes,
             'rushing_yards': self.rushing_yards,
             'rushing_touchdowns': self.rushing_touchdowns,
+            'passing_attempts': self.passing_attempts,
+            'passing_completions': self.passing_completions,
+            'passing_yards': self.passing_yards,
+            'passing_touchdowns': self.passing_touchdowns,
+            'interceptions': self.interceptions,
             'opponent': self.opponent,
             'home_away': self.home_away,
             'created_at': self.created_at.isoformat() if self.created_at else None,

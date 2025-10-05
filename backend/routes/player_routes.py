@@ -148,9 +148,15 @@ def get_player_stats_summary(player_id):
             func.sum(PlayerStats.rushes).label('total_rushes'),
             func.sum(PlayerStats.rushing_yards).label('total_rushing_yards'),
             func.sum(PlayerStats.rushing_touchdowns).label('total_rushing_tds'),
+            func.sum(PlayerStats.passing_attempts).label('total_passing_attempts'),
+            func.sum(PlayerStats.passing_completions).label('total_passing_completions'),
+            func.sum(PlayerStats.passing_yards).label('total_passing_yards'),
+            func.sum(PlayerStats.passing_touchdowns).label('total_passing_tds'),
+            func.sum(PlayerStats.interceptions).label('total_interceptions'),
             func.avg(PlayerStats.receptions).label('avg_receptions'),
             func.avg(PlayerStats.receiving_yards).label('avg_receiving_yards'),
             func.avg(PlayerStats.rushing_yards).label('avg_rushing_yards'),
+            func.avg(PlayerStats.passing_yards).label('avg_passing_yards'),
             func.count(PlayerStats.id).label('games_played')
         ).filter(
             PlayerStats.player_id == player_id,
@@ -171,12 +177,18 @@ def get_player_stats_summary(player_id):
                     'targets': summary.total_targets or 0,
                     'rushes': summary.total_rushes or 0,
                     'rushing_yards': summary.total_rushing_yards or 0,
-                    'rushing_touchdowns': summary.total_rushing_tds or 0
+                    'rushing_touchdowns': summary.total_rushing_tds or 0,
+                    'passing_attempts': summary.total_passing_attempts or 0,
+                    'passing_completions': summary.total_passing_completions or 0,
+                    'passing_yards': summary.total_passing_yards or 0,
+                    'passing_touchdowns': summary.total_passing_tds or 0,
+                    'interceptions': summary.total_interceptions or 0
                 },
                 'averages': {
                     'receptions_per_game': round(summary.avg_receptions or 0, 2),
                     'receiving_yards_per_game': round(summary.avg_receiving_yards or 0, 2),
-                    'rushing_yards_per_game': round(summary.avg_rushing_yards or 0, 2)
+                    'rushing_yards_per_game': round(summary.avg_rushing_yards or 0, 2),
+                    'passing_yards_per_game': round(summary.avg_passing_yards or 0, 2)
                 }
             }
         }), 200
@@ -207,7 +219,12 @@ def get_player_career_stats(player_id):
             func.sum(PlayerStats.rushes).label('total_rushes'),
             func.sum(PlayerStats.rushing_yards).label('total_rushing_yards'),
             func.sum(PlayerStats.rushing_touchdowns).label('total_rushing_tds'),
-            func.sum(PlayerStats.targets).label('total_targets')
+            func.sum(PlayerStats.targets).label('total_targets'),
+            func.sum(PlayerStats.passing_attempts).label('total_passing_attempts'),
+            func.sum(PlayerStats.passing_completions).label('total_passing_completions'),
+            func.sum(PlayerStats.passing_yards).label('total_passing_yards'),
+            func.sum(PlayerStats.passing_touchdowns).label('total_passing_tds'),
+            func.sum(PlayerStats.interceptions).label('total_interceptions')
         ).filter(
             PlayerStats.player_id == player_id,
             PlayerStats.week.isnot(None)
@@ -222,8 +239,11 @@ def get_player_career_stats(player_id):
         # Calculate arrays for standard deviation
         rushing_yards_list = [s.rushing_yards or 0 for s in all_stats]
         receiving_yards_list = [s.receiving_yards or 0 for s in all_stats]
+        passing_yards_list = [s.passing_yards or 0 for s in all_stats]
         rushing_td_list = [s.rushing_touchdowns or 0 for s in all_stats]
         receiving_td_list = [s.receiving_touchdowns or 0 for s in all_stats]
+        passing_td_list = [s.passing_touchdowns or 0 for s in all_stats]
+        interceptions_list = [s.interceptions or 0 for s in all_stats]
         total_td_list = [(s.rushing_touchdowns or 0) + (s.receiving_touchdowns or 0) for s in all_stats]
 
         # Format season-by-season data
@@ -239,11 +259,17 @@ def get_player_career_stats(player_id):
                     'rushes': season.total_rushes or 0,
                     'rushing_yards': season.total_rushing_yards or 0,
                     'rushing_touchdowns': season.total_rushing_tds or 0,
-                    'targets': season.total_targets or 0
+                    'targets': season.total_targets or 0,
+                    'passing_attempts': season.total_passing_attempts or 0,
+                    'passing_completions': season.total_passing_completions or 0,
+                    'passing_yards': season.total_passing_yards or 0,
+                    'passing_touchdowns': season.total_passing_tds or 0,
+                    'interceptions': season.total_interceptions or 0
                 },
                 'averages': {
                     'receiving_yards_per_game': round((season.total_receiving_yards or 0) / season.games_played, 2) if season.games_played > 0 else 0,
                     'rushing_yards_per_game': round((season.total_rushing_yards or 0) / season.games_played, 2) if season.games_played > 0 else 0,
+                    'passing_yards_per_game': round((season.total_passing_yards or 0) / season.games_played, 2) if season.games_played > 0 else 0,
                     'total_touchdowns_per_game': round(((season.total_receiving_tds or 0) + (season.total_rushing_tds or 0)) / season.games_played, 2) if season.games_played > 0 else 0
                 }
             })
@@ -255,15 +281,21 @@ def get_player_career_stats(player_id):
             'averages': {
                 'rushing_yards_per_game': round(np.mean(rushing_yards_list), 2) if rushing_yards_list else 0,
                 'receiving_yards_per_game': round(np.mean(receiving_yards_list), 2) if receiving_yards_list else 0,
+                'passing_yards_per_game': round(np.mean(passing_yards_list), 2) if passing_yards_list else 0,
                 'rushing_touchdowns_per_game': round(np.mean(rushing_td_list), 2) if rushing_td_list else 0,
                 'receiving_touchdowns_per_game': round(np.mean(receiving_td_list), 2) if receiving_td_list else 0,
+                'passing_touchdowns_per_game': round(np.mean(passing_td_list), 2) if passing_td_list else 0,
+                'interceptions_per_game': round(np.mean(interceptions_list), 2) if interceptions_list else 0,
                 'total_touchdowns_per_game': round(np.mean(total_td_list), 2) if total_td_list else 0
             },
             'standard_deviations': {
                 'rushing_yards': round(np.std(rushing_yards_list), 2) if len(rushing_yards_list) > 1 else 0,
                 'receiving_yards': round(np.std(receiving_yards_list), 2) if len(receiving_yards_list) > 1 else 0,
+                'passing_yards': round(np.std(passing_yards_list), 2) if len(passing_yards_list) > 1 else 0,
                 'rushing_touchdowns': round(np.std(rushing_td_list), 2) if len(rushing_td_list) > 1 else 0,
                 'receiving_touchdowns': round(np.std(receiving_td_list), 2) if len(receiving_td_list) > 1 else 0,
+                'passing_touchdowns': round(np.std(passing_td_list), 2) if len(passing_td_list) > 1 else 0,
+                'interceptions': round(np.std(interceptions_list), 2) if len(interceptions_list) > 1 else 0,
                 'total_touchdowns': round(np.std(total_td_list), 2) if len(total_td_list) > 1 else 0
             }
         }
@@ -328,7 +360,9 @@ def get_current_season_players():
             'receiving_yards': func.sum(PlayerStats.receiving_yards),
             'rushing_yards': func.sum(PlayerStats.rushing_yards),
             'receptions': func.sum(PlayerStats.receptions),
-            'touchdowns': func.sum(PlayerStats.receiving_touchdowns + PlayerStats.rushing_touchdowns)
+            'touchdowns': func.sum(PlayerStats.receiving_touchdowns + PlayerStats.rushing_touchdowns),
+            'passing_yards': func.sum(PlayerStats.passing_yards),
+            'passing_touchdowns': func.sum(PlayerStats.passing_touchdowns)
         }
 
         sort_column = sort_column_map.get(sort_by, func.sum(PlayerStats.receiving_yards))
@@ -342,6 +376,11 @@ def get_current_season_players():
             func.sum(PlayerStats.rushes).label('total_rushes'),
             func.sum(PlayerStats.rushing_yards).label('total_rushing_yards'),
             func.sum(PlayerStats.rushing_touchdowns).label('total_rushing_tds'),
+            func.sum(PlayerStats.passing_attempts).label('total_passing_attempts'),
+            func.sum(PlayerStats.passing_completions).label('total_passing_completions'),
+            func.sum(PlayerStats.passing_yards).label('total_passing_yards'),
+            func.sum(PlayerStats.passing_touchdowns).label('total_passing_tds'),
+            func.sum(PlayerStats.interceptions).label('total_interceptions'),
             func.count(PlayerStats.id).label('games_played')
         ).join(PlayerStats).filter(
             PlayerStats.season == current_season,
@@ -367,7 +406,12 @@ def get_current_season_players():
                 'total_receiving_touchdowns': result.total_receiving_tds or 0,
                 'total_rushes': result.total_rushes or 0,
                 'total_rushing_yards': result.total_rushing_yards or 0,
-                'total_rushing_touchdowns': result.total_rushing_tds or 0
+                'total_rushing_touchdowns': result.total_rushing_tds or 0,
+                'total_passing_attempts': result.total_passing_attempts or 0,
+                'total_passing_completions': result.total_passing_completions or 0,
+                'total_passing_yards': result.total_passing_yards or 0,
+                'total_passing_touchdowns': result.total_passing_tds or 0,
+                'total_interceptions': result.total_interceptions or 0
             }
             players_data.append(player_dict)
 

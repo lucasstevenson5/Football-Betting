@@ -23,6 +23,9 @@ class PredictionService:
     # Yardage benchmarks to predict
     YARDAGE_BENCHMARKS = [15, 25, 40, 50, 65, 75, 100, 125, 150]
 
+    # QB-specific passing yards benchmarks
+    QB_PASSING_BENCHMARKS = [150, 200, 250, 300, 350, 400]
+
     # Time decay factors (more recent = higher weight)
     CURRENT_SEASON_WEIGHT = 2.0  # Current season weighted 2x higher
     WEEK_DECAY_FACTOR = 0.95  # Each week back reduces weight by 5%
@@ -87,10 +90,16 @@ class PredictionService:
                 values.append(stat.receiving_yards or 0)
             elif stat_type == 'rushing_yards':
                 values.append(stat.rushing_yards or 0)
+            elif stat_type == 'passing_yards':
+                values.append(stat.passing_yards or 0)
             elif stat_type == 'total_yards':
                 values.append((stat.receiving_yards or 0) + (stat.rushing_yards or 0))
             elif stat_type == 'touchdowns':
                 values.append((stat.receiving_touchdowns or 0) + (stat.rushing_touchdowns or 0))
+            elif stat_type == 'passing_touchdowns':
+                values.append(stat.passing_touchdowns or 0)
+            elif stat_type == 'interceptions':
+                values.append(stat.interceptions or 0)
 
             games_data.append({
                 'season': stat.season,
@@ -279,18 +288,198 @@ class PredictionService:
             'consistency': round(1 / (1 + player_td_std / player_td_avg), 2) if player_td_avg > 0 else 0
         }
 
+    def predict_qb_passing_probabilities(self, player_id, opponent_team):
+        """
+        Predict QB passing yards probabilities using QB-specific benchmarks
+
+        Args:
+            player_id: Player database ID
+            opponent_team: Opponent team abbreviation
+
+        Returns:
+            Dictionary with probabilities for each QB passing benchmark
+        """
+        # Get player passing stats
+        player_mean, player_std, recent_values = self.get_player_stats_weighted(
+            player_id, stat_type='passing_yards', limit=20
+        )
+
+        if player_mean == 0:
+            return {benchmark: 0.0 for benchmark in self.QB_PASSING_BENCHMARKS}
+
+        # Get opponent defensive stats (passing yards allowed)
+        def_mean, def_std = self.get_defensive_stats(opponent_team, stat_type='passing')
+
+        # Adjust player mean based on opponent defense
+        if def_mean is not None:
+            # League average passing yards allowed per game
+            league_avg = 220
+
+            # Adjustment factor based on opponent defense vs league average
+            defensive_factor = def_mean / league_avg if league_avg > 0 else 1.0
+
+            # Adjust player projection
+            adjusted_mean = player_mean * defensive_factor
+        else:
+            adjusted_mean = player_mean
+
+        # Use player's std dev for distribution
+        if player_std < 10:
+            player_std = max(player_std, adjusted_mean * 0.25)
+
+        # Calculate probabilities
+        probabilities = {}
+
+        for benchmark in self.QB_PASSING_BENCHMARKS:
+            z_score = (benchmark - adjusted_mean) / player_std if player_std > 0 else 0
+            prob = 1 - scipy_stats.norm.cdf(z_score)
+            probabilities[benchmark] = round(prob * 100, 2)
+
+        return {
+            'probabilities': probabilities,
+            'projected_yards': round(adjusted_mean, 1),
+            'player_avg': round(player_mean, 1),
+            'opponent_avg_allowed': round(def_mean, 1) if def_mean else None,
+            'consistency_score': round(1 / (1 + player_std / player_mean), 2) if player_mean > 0 else 0
+        }
+
+    def predict_qb_passing_touchdowns(self, player_id, opponent_team):
+        """
+        Predict QB passing touchdown probabilities for multiple thresholds
+
+        Args:
+            player_id: Player database ID
+            opponent_team: Opponent team abbreviation
+
+        Returns:
+            Dictionary with probabilities for 1+, 2+, 3+, 4+ TDs
+        """
+        # Get player passing TD stats
+        player_td_avg, player_td_std, recent_tds = self.get_player_stats_weighted(
+            player_id, stat_type='passing_touchdowns', limit=20
+        )
+
+        if player_td_avg == 0:
+            return {
+                'td_probabilities': {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0},
+                'avg_tds_per_game': 0.0
+            }
+
+        # Get opponent defensive stats (points allowed as proxy)
+        team = Team.query.filter_by(team_abbr=opponent_team).first()
+        if team:
+            current_season = 2025
+            recent_stats = TeamStats.query.filter(
+                TeamStats.team_id == team.id,
+                TeamStats.season == current_season,
+                TeamStats.week.isnot(None)
+            ).order_by(TeamStats.week.desc()).all()
+
+            if recent_stats:
+                avg_points_allowed = np.mean([s.points_against or 0 for s in recent_stats])
+                td_factor = avg_points_allowed / 22.0 if avg_points_allowed > 0 else 1.0
+            else:
+                td_factor = 1.0
+        else:
+            td_factor = 1.0
+
+        # Adjust TD expectation
+        adjusted_td_avg = player_td_avg * td_factor
+
+        # Calculate probabilities for multiple thresholds using Poisson distribution
+        td_probabilities = {}
+        for threshold in [1, 2, 3, 4]:
+            # P(X >= threshold) = 1 - P(X < threshold) = 1 - sum(P(X=k) for k=0 to threshold-1)
+            prob_less_than = sum(
+                (adjusted_td_avg ** k) * np.exp(-adjusted_td_avg) / np.math.factorial(k)
+                for k in range(threshold)
+            )
+            prob_at_least = 1 - prob_less_than
+            td_probabilities[threshold] = round(prob_at_least * 100, 2)
+
+        return {
+            'td_probabilities': td_probabilities,
+            'avg_tds_per_game': round(adjusted_td_avg, 2),
+            'player_td_avg': round(player_td_avg, 2),
+            'consistency': round(1 / (1 + player_td_std / player_td_avg), 2) if player_td_avg > 0 else 0
+        }
+
+    def predict_qb_interceptions(self, player_id):
+        """
+        Predict QB interception probability
+
+        Args:
+            player_id: Player database ID
+
+        Returns:
+            Dictionary with interception probability
+        """
+        # Get player interception stats
+        player_int_avg, player_int_std, recent_ints = self.get_player_stats_weighted(
+            player_id, stat_type='interceptions', limit=20
+        )
+
+        if player_int_avg == 0:
+            return {
+                'int_probability': 0.0,
+                'avg_ints_per_game': 0.0,
+                'prob_0_ints': 100.0,
+                'prob_1_int': 0.0,
+                'prob_2plus_ints': 0.0
+            }
+
+        # Use Poisson distribution for interception probabilities
+        # P(X = k) = (lambda^k * e^(-lambda)) / k!
+        prob_0 = np.exp(-player_int_avg)
+        prob_1 = player_int_avg * np.exp(-player_int_avg)
+        prob_2plus = 1 - prob_0 - prob_1
+
+        # Probability of at least 1 interception
+        int_prob = 1 - prob_0
+
+        return {
+            'int_probability': round(int_prob * 100, 2),
+            'avg_ints_per_game': round(player_int_avg, 2),
+            'prob_0_ints': round(prob_0 * 100, 2),
+            'prob_1_int': round(prob_1 * 100, 2),
+            'prob_2plus_ints': round(prob_2plus * 100, 2)
+        }
+
     def get_player_prediction(self, player_id, opponent_team):
         """
         Get complete prediction for a player against an opponent
 
         Returns separate rushing and receiving predictions for all positions
+        QB predictions include passing yards, passing TDs, and interceptions
         """
         # Get player info
         player = Player.query.get(player_id)
         if not player:
             return None
 
-        # Get both rushing and receiving predictions for all players
+        # Handle QB predictions differently
+        if player.position == 'QB':
+            # Get QB-specific predictions
+            passing_pred = self.predict_qb_passing_probabilities(player_id, opponent_team)
+            passing_td_pred = self.predict_qb_passing_touchdowns(player_id, opponent_team)
+            int_pred = self.predict_qb_interceptions(player_id)
+
+            # Check if QB has rushing stats
+            rushing_pred = self.predict_yardage_probabilities(
+                player_id, opponent_team, stat_type='rushing_yards'
+            )
+
+            return {
+                'player': player.to_dict(),
+                'opponent': opponent_team,
+                'stat_type': 'passing_yards',
+                'passing_predictions': passing_pred,
+                'passing_td_prediction': passing_td_pred,
+                'interception_prediction': int_pred,
+                'rushing_predictions': rushing_pred if rushing_pred['projected_yards'] > 0 else None
+            }
+
+        # Non-QB predictions (WR, RB, TE)
         receiving_pred = self.predict_yardage_probabilities(
             player_id, opponent_team, stat_type='receiving_yards'
         )

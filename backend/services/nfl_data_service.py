@@ -45,11 +45,11 @@ class NFLDataService:
             print(f"Fetching player stats for seasons: {seasons}")
 
             # Fetch weekly player stats
-            # This includes receiving and rushing stats for all players
+            # This includes passing, receiving and rushing stats for all players
             weekly_stats = nfl.import_weekly_data(seasons)
 
-            # Filter for relevant positions (RB, WR, TE)
-            relevant_positions = ['RB', 'WR', 'TE']
+            # Filter for relevant positions (QB, RB, WR, TE)
+            relevant_positions = ['QB', 'RB', 'WR', 'TE']
             weekly_stats = weekly_stats[weekly_stats['position'].isin(relevant_positions)]
 
             print(f"Fetched {len(weekly_stats)} player stat records")
@@ -211,6 +211,11 @@ class NFLDataService:
                     existing_stat.rushes = row.get('carries', 0) or 0
                     existing_stat.rushing_yards = row.get('rushing_yards', 0) or 0
                     existing_stat.rushing_touchdowns = row.get('rushing_tds', 0) or 0
+                    existing_stat.passing_attempts = row.get('attempts', 0) or 0
+                    existing_stat.passing_completions = row.get('completions', 0) or 0
+                    existing_stat.passing_yards = row.get('passing_yards', 0) or 0
+                    existing_stat.passing_touchdowns = row.get('passing_tds', 0) or 0
+                    existing_stat.interceptions = row.get('interceptions', 0) or 0
                     existing_stat.opponent = row.get('opponent_team', None)
                     updated_count += 1
                 else:
@@ -226,6 +231,11 @@ class NFLDataService:
                         rushes=row.get('carries', 0) or 0,
                         rushing_yards=row.get('rushing_yards', 0) or 0,
                         rushing_touchdowns=row.get('rushing_tds', 0) or 0,
+                        passing_attempts=row.get('attempts', 0) or 0,
+                        passing_completions=row.get('completions', 0) or 0,
+                        passing_yards=row.get('passing_yards', 0) or 0,
+                        passing_touchdowns=row.get('passing_tds', 0) or 0,
+                        interceptions=row.get('interceptions', 0) or 0,
                         opponent=row.get('opponent_team', None)
                     )
                     db.session.add(stat)

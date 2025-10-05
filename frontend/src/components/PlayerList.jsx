@@ -73,7 +73,7 @@ const PlayerList = () => {
     }
   };
 
-  const positions = ['ALL', 'WR', 'RB', 'TE'];
+  const positions = ['ALL', 'QB', 'WR', 'RB', 'TE'];
 
   return (
     <div className="player-list-container">
@@ -122,10 +122,21 @@ const PlayerList = () => {
             onChange={(e) => setSortBy(e.target.value)}
             className="filter-select"
           >
-            <option value="receiving_yards">Receiving Yards</option>
-            <option value="rushing_yards">Rushing Yards</option>
-            <option value="receptions">Receptions</option>
-            <option value="touchdowns">Touchdowns</option>
+            {selectedPosition === 'QB' ? (
+              <>
+                <option value="passing_yards">Passing Yards</option>
+                <option value="passing_touchdowns">Passing TDs</option>
+                <option value="rushing_yards">Rushing Yards</option>
+                <option value="touchdowns">Total TDs</option>
+              </>
+            ) : (
+              <>
+                <option value="receiving_yards">Receiving Yards</option>
+                <option value="rushing_yards">Rushing Yards</option>
+                <option value="receptions">Receptions</option>
+                <option value="touchdowns">Touchdowns</option>
+              </>
+            )}
           </select>
         </div>
 

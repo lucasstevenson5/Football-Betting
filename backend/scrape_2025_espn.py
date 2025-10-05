@@ -36,10 +36,11 @@ def get_player_stats_from_game(event_id, week):
     response.raise_for_status()
     data = response.json()
 
-    players = []
+    # Dictionary to aggregate stats by player
+    player_dict = {}
 
     if 'boxscore' not in data or 'players' not in data['boxscore']:
-        return players
+        return []
 
     for team_data in data['boxscore']['players']:
         team_abbr = team_data['team']['abbreviation']
@@ -47,7 +48,7 @@ def get_player_stats_from_game(event_id, week):
         for stat_category in team_data.get('statistics', []):
             cat_name = stat_category['name']
 
-            if cat_name not in ['rushing', 'receiving']:
+            if cat_name not in ['rushing', 'receiving', 'passing']:
                 continue
 
             keys = stat_category['keys']
@@ -55,36 +56,65 @@ def get_player_stats_from_game(event_id, week):
             for athlete_data in stat_category.get('athletes', []):
                 athlete = athlete_data['athlete']
                 stats = athlete_data['stats']
+                athlete_id = athlete['id']
+
+                # Initialize player entry if not exists
+                if athlete_id not in player_dict:
+                    # Get position from athlete data if available
+                    position = None
+                    if 'position' in athlete:
+                        pos_data = athlete['position']
+                        if isinstance(pos_data, dict) and 'abbreviation' in pos_data:
+                            position = pos_data['abbreviation']
+                        elif isinstance(pos_data, str):
+                            position = pos_data
+
+                    player_dict[athlete_id] = {
+                        'espn_id': athlete_id,
+                        'name': athlete['displayName'],
+                        'team': team_abbr,
+                        'position': position,  # Store actual position from ESPN
+                        'categories': [],  # Track which categories player appears in
+                        'stats': {'week': week}
+                    }
+
+                # Track category
+                player_dict[athlete_id]['categories'].append(cat_name)
 
                 # Map stats to our format
-                player_stats = {'week': week}
-
                 for i, key in enumerate(keys):
                     if i < len(stats):
                         val = stats[i]
                         if key == 'receptions':
-                            player_stats['receptions'] = int(val) if val.isdigit() else 0
+                            player_dict[athlete_id]['stats']['receptions'] = int(val) if val.isdigit() else 0
                         elif key == 'receivingYards':
-                            player_stats['receiving_yards'] = int(val) if val.lstrip('-').isdigit() else 0
+                            player_dict[athlete_id]['stats']['receiving_yards'] = int(val) if val.lstrip('-').isdigit() else 0
                         elif key == 'receivingTouchdowns':
-                            player_stats['receiving_touchdowns'] = int(val) if val.isdigit() else 0
+                            player_dict[athlete_id]['stats']['receiving_touchdowns'] = int(val) if val.isdigit() else 0
                         elif key == 'receivingTargets':
-                            player_stats['targets'] = int(val) if val.isdigit() else 0
+                            player_dict[athlete_id]['stats']['targets'] = int(val) if val.isdigit() else 0
                         elif key == 'rushingAttempts':
-                            player_stats['rushes'] = int(val) if val.isdigit() else 0
+                            player_dict[athlete_id]['stats']['rushes'] = int(val) if val.isdigit() else 0
                         elif key == 'rushingYards':
-                            player_stats['rushing_yards'] = int(val) if val.lstrip('-').isdigit() else 0
+                            player_dict[athlete_id]['stats']['rushing_yards'] = int(val) if val.lstrip('-').isdigit() else 0
                         elif key == 'rushingTouchdowns':
-                            player_stats['rushing_touchdowns'] = int(val) if val.isdigit() else 0
+                            player_dict[athlete_id]['stats']['rushing_touchdowns'] = int(val) if val.isdigit() else 0
+                        elif key == 'passingAttempts' or key == 'completions/passingAttempts':
+                            # Handle "C/ATT" format or just attempts
+                            if '/' in val:
+                                comp, att = val.split('/')
+                                player_dict[athlete_id]['stats']['passing_completions'] = int(comp) if comp.isdigit() else 0
+                                player_dict[athlete_id]['stats']['passing_attempts'] = int(att) if att.isdigit() else 0
+                            else:
+                                player_dict[athlete_id]['stats']['passing_attempts'] = int(val) if val.isdigit() else 0
+                        elif key == 'passingYards':
+                            player_dict[athlete_id]['stats']['passing_yards'] = int(val) if val.lstrip('-').isdigit() else 0
+                        elif key == 'passingTouchdowns':
+                            player_dict[athlete_id]['stats']['passing_touchdowns'] = int(val) if val.isdigit() else 0
+                        elif key == 'interceptions':
+                            player_dict[athlete_id]['stats']['interceptions'] = int(val) if val.isdigit() else 0
 
-                players.append({
-                    'espn_id': athlete['id'],
-                    'name': athlete['displayName'],
-                    'team': team_abbr,
-                    'stats': player_stats
-                })
-
-    return players
+    return list(player_dict.values())
 
 def normalize_team_abbr(team):
     """Normalize team abbreviations to match historical data"""
@@ -165,12 +195,29 @@ def import_2025_week(week):
                     else:
                         player = matching_candidates[0]
 
-            # Determine position (WR, RB, TE) based on stats
-            stats = player_data['stats']
-            if stats.get('receiving_yards', 0) > stats.get('rushing_yards', 0):
-                position = 'WR'  # Will need to refine later
+            # Use actual position from ESPN data
+            espn_position = player_data.get('position')
+
+            # Only use positions we care about: QB, RB, WR, TE
+            if espn_position in ['QB', 'RB', 'WR', 'TE']:
+                position = espn_position
             else:
-                position = 'RB'
+                # Fallback: try to infer from stats if position not available or invalid
+                categories = player_data.get('categories', [])
+                stats = player_data['stats']
+
+                if 'passing' in categories:
+                    position = 'QB'
+                elif 'receiving' in categories:
+                    if stats.get('rushes', 0) >= 5 and stats.get('receiving_yards', 0) < stats.get('rushing_yards', 0) * 2:
+                        position = 'RB'
+                    else:
+                        position = 'WR'
+                elif 'rushing' in categories:
+                    position = 'RB'
+                else:
+                    # Skip players we can't categorize
+                    continue
 
             if not player:
                 # Create new player only if we couldn't match
@@ -202,7 +249,12 @@ def import_2025_week(week):
                     targets=stats.get('targets', 0),
                     rushes=stats.get('rushes', 0),
                     rushing_yards=stats.get('rushing_yards', 0),
-                    rushing_touchdowns=stats.get('rushing_touchdowns', 0)
+                    rushing_touchdowns=stats.get('rushing_touchdowns', 0),
+                    passing_attempts=stats.get('passing_attempts', 0),
+                    passing_completions=stats.get('passing_completions', 0),
+                    passing_yards=stats.get('passing_yards', 0),
+                    passing_touchdowns=stats.get('passing_touchdowns', 0),
+                    interceptions=stats.get('interceptions', 0)
                 )
                 db.session.add(week_stat)
                 imported += 1
