@@ -2,6 +2,8 @@
   max-width: 1400px;
   margin: 0 auto;
   padding: 24px;
+  background: #2d3748;
+  min-height: 100vh;
 }
 
 .player-list-header {
@@ -13,13 +15,13 @@
   margin: 0 0 8px 0;
   font-size: 2.5rem;
   font-weight: 800;
-  color: #1a1a1a;
+  color: white;
 }
 
 .subtitle {
   margin: 0;
   font-size: 1.1rem;
-  color: #666;
+  color: #e2e8f0;
 }
 
 .filters {

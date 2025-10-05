@@ -52,10 +52,15 @@ const PlayerCard = ({ player, onClick }) => {
         <div className="player-info">
           <h3 className="player-name">{player.name}</h3>
           <div className="player-meta">
-            <span className={`position position-${player.position}`}>
+            <span
+              className={`position position-${player.position}`}
+              style={{ background: '#000', color: 'white' }}
+            >
               {player.position}
             </span>
-            <span className="team">{player.team}</span>
+            <span className="team" style={{ background: '#000', color: 'white' }}>
+              {player.team}
+            </span>
           </div>
         </div>
       </div>
