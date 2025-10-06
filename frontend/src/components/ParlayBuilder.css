@@ -852,6 +852,30 @@
   color: #f59e0b;
 }
 
+.saved-summary-highlight.red {
+  color: #ef4444;
+}
+
+/* Value Indicator Styles */
+.summary-item.value-indicator {
+  grid-column: span 2;
+}
+
+.summary-value.good-value {
+  color: #10b981;
+  font-size: 1.3rem;
+}
+
+.summary-value.bad-value {
+  color: #ef4444;
+  font-size: 1.3rem;
+}
+
+.summary-value.fair-value {
+  color: #f59e0b;
+  font-size: 1.3rem;
+}
+
 @media (max-width: 768px) {
   .parlay-builder-container {
     padding: 16px;

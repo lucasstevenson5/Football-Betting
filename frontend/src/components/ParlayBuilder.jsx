@@ -78,6 +78,7 @@ const ParlayBuilder = () => {
       id: Date.now(),
       legs: [],
       betAmount: 10,
+      bookCombinedOdds: null, // Store sportsbook's combined odds for comparison
       createdAt: new Date().toISOString()
     });
     setIsBuilding(true);
@@ -310,7 +311,8 @@ const ParlayBuilder = () => {
       overUnder: overUnder,
       opponent: opponent,
       opponentName: opponentTeam ? opponentTeam.name : opponent,
-      probability: probability
+      probability: probability,
+      bookOdds: null // Store sportsbook odds for this leg
     };
 
     setCurrentParlay({
@@ -356,6 +358,19 @@ const ParlayBuilder = () => {
     } else {
       // Underdog (positive odds)
       return Math.round((1 - decimal) / decimal * 100);
+    }
+  };
+
+  // Convert American odds to implied probability
+  const americanOddsToImpliedProbability = (odds) => {
+    if (!odds) return null;
+
+    if (odds > 0) {
+      // Underdog
+      return (100 / (odds + 100)) * 100;
+    } else {
+      // Favorite
+      return (Math.abs(odds) / (Math.abs(odds) + 100)) * 100;
     }
   };
 
@@ -532,24 +547,75 @@ const ParlayBuilder = () => {
                   </div>
 
                   <div className="summary-item">
-                    <span className="summary-label">Combined Probability:</span>
+                    <span className="summary-label">Our Probability:</span>
                     <span className="summary-value probability">
                       {calculateCombinedProbability(currentParlay.legs).toFixed(2)}%
                     </span>
                   </div>
 
                   <div className="summary-item">
-                    <span className="summary-label">American Odds:</span>
+                    <span className="summary-label">Our American Odds:</span>
                     <span className="summary-value odds">
                       {formatAmericanOdds(probabilityToAmericanOdds(calculateCombinedProbability(currentParlay.legs)))}
                     </span>
                   </div>
 
                   <div className="summary-item">
+                    <span className="summary-label">Sportsbook Combined Odds:</span>
+                    <div className="bet-amount-input">
+                      <input
+                        type="number"
+                        placeholder="e.g., +250 or -150"
+                        value={currentParlay.bookCombinedOdds || ''}
+                        onChange={(e) => setCurrentParlay({
+                          ...currentParlay,
+                          bookCombinedOdds: parseFloat(e.target.value) || null
+                        })}
+                        className="bet-amount-field"
+                        style={{ width: '120px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {currentParlay.bookCombinedOdds && (
+                    <>
+                      <div className="summary-item">
+                        <span className="summary-label">Sportsbook Implied Prob:</span>
+                        <span className="summary-value">
+                          {americanOddsToImpliedProbability(currentParlay.bookCombinedOdds)?.toFixed(2)}%
+                        </span>
+                      </div>
+
+                      <div className="summary-item value-indicator">
+                        <span className="summary-label">Value Assessment:</span>
+                        <span className={`summary-value ${
+                          (() => {
+                            const ourProb = calculateCombinedProbability(currentParlay.legs);
+                            const bookProb = americanOddsToImpliedProbability(currentParlay.bookCombinedOdds);
+                            const diff = ourProb - bookProb;
+
+                            if (Math.abs(diff) <= 2) return 'fair-value';
+                            return diff > 0 ? 'good-value' : 'bad-value';
+                          })()
+                        }`}>
+                          {(() => {
+                            const ourProb = calculateCombinedProbability(currentParlay.legs);
+                            const bookProb = americanOddsToImpliedProbability(currentParlay.bookCombinedOdds);
+                            const diff = ourProb - bookProb;
+
+                            if (Math.abs(diff) <= 2) return '= Fair Value';
+                            return diff > 0 ? '✓ Good Value' : '✗ Poor Value';
+                          })()}
+                        </span>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="summary-item">
                     <span className="summary-label">Potential Payout:</span>
                     <span className="summary-value payout">
                       ${ calculatePayout(
-                        probabilityToAmericanOdds(calculateCombinedProbability(currentParlay.legs)),
+                        currentParlay.bookCombinedOdds || probabilityToAmericanOdds(calculateCombinedProbability(currentParlay.legs)),
                         currentParlay.betAmount
                       ).toFixed(2)}
                     </span>
@@ -559,7 +625,7 @@ const ParlayBuilder = () => {
                     <span className="summary-label">Total Return:</span>
                     <span className="summary-value total">
                       ${(parseFloat(currentParlay.betAmount) + calculatePayout(
-                        probabilityToAmericanOdds(calculateCombinedProbability(currentParlay.legs)),
+                        currentParlay.bookCombinedOdds || probabilityToAmericanOdds(calculateCombinedProbability(currentParlay.legs)),
                         currentParlay.betAmount
                       )).toFixed(2)}
                     </span>
@@ -701,8 +767,10 @@ const ParlayBuilder = () => {
           <div className="parlays-grid">
             {parlays.map(parlay => {
               const combinedProb = calculateCombinedProbability(parlay.legs);
-              const americanOdds = probabilityToAmericanOdds(combinedProb);
-              const payout = calculatePayout(americanOdds, parlay.betAmount);
+              const ourAmericanOdds = probabilityToAmericanOdds(combinedProb);
+              const bookOdds = parlay.bookCombinedOdds;
+              const bookImpliedProb = bookOdds ? americanOddsToImpliedProbability(bookOdds) : null;
+              const payout = calculatePayout(bookOdds || ourAmericanOdds, parlay.betAmount);
 
               return (
                 <div key={parlay.id} className="parlay-card">
@@ -743,13 +811,41 @@ const ParlayBuilder = () => {
                         <span className="saved-summary-highlight">${parlay.betAmount}</span>
                       </div>
                       <div className="saved-summary-row">
-                        <span>Combined Probability:</span>
+                        <span>Our Probability:</span>
                         <span className="saved-summary-highlight green">{combinedProb.toFixed(2)}%</span>
                       </div>
                       <div className="saved-summary-row">
-                        <span>American Odds:</span>
-                        <span className="saved-summary-highlight blue">{formatAmericanOdds(americanOdds)}</span>
+                        <span>Our Odds:</span>
+                        <span className="saved-summary-highlight blue">{formatAmericanOdds(ourAmericanOdds)}</span>
                       </div>
+                      {bookOdds && (
+                        <>
+                          <div className="saved-summary-row">
+                            <span>Sportsbook Odds:</span>
+                            <span className="saved-summary-highlight blue">{formatAmericanOdds(bookOdds)}</span>
+                          </div>
+                          <div className="saved-summary-row">
+                            <span>Book Implied Prob:</span>
+                            <span className="saved-summary-highlight">{bookImpliedProb?.toFixed(2)}%</span>
+                          </div>
+                          <div className="saved-summary-row">
+                            <span>Value:</span>
+                            <span className={`saved-summary-highlight ${
+                              (() => {
+                                const diff = combinedProb - bookImpliedProb;
+                                if (Math.abs(diff) <= 2) return 'orange';
+                                return diff > 0 ? 'green' : 'red';
+                              })()
+                            }`}>
+                              {(() => {
+                                const diff = combinedProb - bookImpliedProb;
+                                if (Math.abs(diff) <= 2) return 'Fair';
+                                return diff > 0 ? 'Good' : 'Poor';
+                              })()}
+                            </span>
+                          </div>
+                        </>
+                      )}
                       <div className="saved-summary-row">
                         <span>Potential Payout:</span>
                         <span className="saved-summary-highlight orange">${payout.toFixed(2)}</span>

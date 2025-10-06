@@ -3,6 +3,50 @@ import { apiService } from '../services/api';
 import PredictionDisplay from './PredictionDisplay';
 import './PlayerDetail.css';
 
+// NFL Teams mapping
+const NFL_TEAMS = {
+  'ARI': 'Cardinals',
+  'ATL': 'Falcons',
+  'BAL': 'Ravens',
+  'BUF': 'Bills',
+  'CAR': 'Panthers',
+  'CHI': 'Bears',
+  'CIN': 'Bengals',
+  'CLE': 'Browns',
+  'DAL': 'Cowboys',
+  'DEN': 'Broncos',
+  'DET': 'Lions',
+  'GB': 'Packers',
+  'HOU': 'Texans',
+  'IND': 'Colts',
+  'JAX': 'Jaguars',
+  'KC': 'Chiefs',
+  'LV': 'Raiders',
+  'LAC': 'Chargers',
+  'LAR': 'Rams',
+  'MIA': 'Dolphins',
+  'MIN': 'Vikings',
+  'NE': 'Patriots',
+  'NO': 'Saints',
+  'NYG': 'Giants',
+  'NYJ': 'Jets',
+  'PHI': 'Eagles',
+  'PIT': 'Steelers',
+  'SEA': 'Seahawks',
+  'SF': '49ers',
+  'TB': 'Buccaneers',
+  'TEN': 'Titans',
+  'WAS': 'Commanders'
+};
+
+// Position colors
+const POSITION_COLORS = {
+  'QB': '#3b82f6',  // Blue
+  'RB': '#10b981',  // Green
+  'WR': '#f59e0b',  // Orange/Amber
+  'TE': '#8b5cf6'   // Purple
+};
+
 const PlayerDetail = ({ playerId, onClose }) => {
   const [playerData, setPlayerData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -58,8 +102,20 @@ const PlayerDetail = ({ playerId, onClose }) => {
         <div className="player-header">
           <h2>{player.name}</h2>
           <div className="player-info">
-            <span className="position">{player.position}</span>
-            {player.team && <span className="team">{player.team}</span>}
+            <span
+              className="position"
+              style={{
+                background: POSITION_COLORS[player.position] || '#000',
+                color: 'white'
+              }}
+            >
+              {player.position}
+            </span>
+            {player.team && (
+              <span className="team" style={{ background: '#000', color: 'white' }}>
+                {NFL_TEAMS[player.team] || player.team}
+              </span>
+            )}
           </div>
         </div>
 

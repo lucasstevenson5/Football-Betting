@@ -38,6 +38,14 @@ const NFL_TEAMS = {
   'WAS': 'Commanders'
 };
 
+// Position colors
+const POSITION_COLORS = {
+  'QB': '#3b82f6',  // Blue
+  'RB': '#10b981',  // Green
+  'WR': '#f59e0b',  // Orange/Amber
+  'TE': '#8b5cf6'   // Purple
+};
+
 const PlayerCard = ({ player, onClick }) => {
   const [showStats, setShowStats] = useState(false);
   const [hoverTimer, setHoverTimer] = useState(null);
@@ -90,7 +98,10 @@ const PlayerCard = ({ player, onClick }) => {
           <div className="player-meta">
             <span
               className={`position position-${player.position}`}
-              style={{ background: '#000', color: 'white' }}
+              style={{
+                background: POSITION_COLORS[player.position] || '#000',
+                color: 'white'
+              }}
             >
               {player.position}
             </span>
