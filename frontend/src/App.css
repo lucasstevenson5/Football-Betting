@@ -1,9 +1,55 @@
 .App {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #2d3748;
   padding: 0;
 }
 
 * {
   box-sizing: border-box;
+}
+
+.app-header {
+  background: #1a202c;
+  border-bottom: 2px solid #4a5568;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.app-tabs {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  gap: 0;
+}
+
+.app-tab {
+  flex: 1;
+  max-width: 300px;
+  padding: 20px 32px;
+  background: transparent;
+  border: none;
+  border-bottom: 4px solid transparent;
+  color: #a0aec0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.app-tab:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.app-tab.active {
+  color: white;
+  border-bottom-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.app-content {
+  min-height: calc(100vh - 68px);
 }
