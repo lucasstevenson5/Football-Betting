@@ -14,6 +14,13 @@ const ParlayBuilder = () => {
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState(2025);
 
+  // Stat selection modal state
+  const [showStatModal, setShowStatModal] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [selectedStat, setSelectedStat] = useState('');
+  const [threshold, setThreshold] = useState('');
+  const [overUnder, setOverUnder] = useState('OVER');
+
   // Load saved parlays from localStorage on mount
   useEffect(() => {
     const savedParlays = localStorage.getItem('parlays');
@@ -89,6 +96,90 @@ const ParlayBuilder = () => {
   const filteredPlayers = players.filter(player =>
     player.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Get available stats based on position
+  const getStatsForPosition = (position) => {
+    const statsByPosition = {
+      QB: [
+        { value: 'passing_yards', label: 'Passing Yards' },
+        { value: 'passing_tds', label: 'Passing TDs' },
+        { value: 'interceptions', label: 'Interceptions' },
+        { value: 'rushing_yards', label: 'Rushing Yards' }
+      ],
+      RB: [
+        { value: 'rushing_yards', label: 'Rushing Yards' },
+        { value: 'rushing_tds', label: 'Rushing TDs' },
+        { value: 'receptions', label: 'Receptions' },
+        { value: 'receiving_yards', label: 'Receiving Yards' }
+      ],
+      WR: [
+        { value: 'receiving_yards', label: 'Receiving Yards' },
+        { value: 'receptions', label: 'Receptions' },
+        { value: 'receiving_tds', label: 'Receiving TDs' }
+      ],
+      TE: [
+        { value: 'receiving_yards', label: 'Receiving Yards' },
+        { value: 'receptions', label: 'Receptions' },
+        { value: 'receiving_tds', label: 'Receiving TDs' }
+      ]
+    };
+    return statsByPosition[position] || [];
+  };
+
+  // Open stat selection modal
+  const openStatModal = (player) => {
+    setSelectedPlayer(player);
+    setShowStatModal(true);
+    setSelectedStat('');
+    setThreshold('');
+    setOverUnder('OVER');
+  };
+
+  // Close stat modal
+  const closeStatModal = () => {
+    setShowStatModal(false);
+    setSelectedPlayer(null);
+    setSelectedStat('');
+    setThreshold('');
+    setOverUnder('OVER');
+  };
+
+  // Add leg to parlay
+  const addLegToParlay = () => {
+    if (!selectedPlayer || !selectedStat || !threshold) return;
+    if (currentParlay.legs.length >= 10) {
+      alert('Maximum 10 legs per parlay');
+      return;
+    }
+
+    const newLeg = {
+      id: Date.now(),
+      playerId: selectedPlayer.id,
+      playerName: selectedPlayer.name,
+      playerTeam: selectedPlayer.team,
+      position: selectedPlayer.position,
+      stat: selectedStat,
+      statLabel: getStatsForPosition(selectedPlayer.position).find(s => s.value === selectedStat)?.label,
+      threshold: parseFloat(threshold),
+      overUnder: overUnder,
+      probability: null // Will be calculated when we fetch predictions
+    };
+
+    setCurrentParlay({
+      ...currentParlay,
+      legs: [...currentParlay.legs, newLeg]
+    });
+
+    closeStatModal();
+  };
+
+  // Remove leg from parlay
+  const removeLeg = (legId) => {
+    setCurrentParlay({
+      ...currentParlay,
+      legs: currentParlay.legs.filter(leg => leg.id !== legId)
+    });
+  };
 
   return (
     <div className="parlay-builder-container">
@@ -171,7 +262,10 @@ const ParlayBuilder = () => {
                             {player.position} - {player.team}
                           </span>
                         </div>
-                        <button className="add-player-btn">
+                        <button
+                          className="add-player-btn"
+                          onClick={() => openStatModal(player)}
+                        >
                           Add +
                         </button>
                       </div>
@@ -181,9 +275,112 @@ const ParlayBuilder = () => {
               </div>
             </div>
 
+            {/* Current Parlay Legs */}
+            {currentParlay.legs.length > 0 && (
+              <div className="current-legs-section">
+                <h3>Current Parlay Legs ({currentParlay.legs.length}/10)</h3>
+                <div className="legs-list">
+                  {currentParlay.legs.map(leg => (
+                    <div key={leg.id} className="leg-item">
+                      <div className="leg-info">
+                        <div className="leg-player">
+                          <span className="leg-player-name">{leg.playerName}</span>
+                          <span className="leg-player-meta">{leg.position} - {leg.playerTeam}</span>
+                        </div>
+                        <div className="leg-stat">
+                          <span className="leg-stat-text">
+                            {leg.overUnder} {leg.threshold} {leg.statLabel}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        className="remove-leg-btn"
+                        onClick={() => removeLeg(leg.id)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Leg Count */}
             <div className="leg-counter">
               <p className="leg-count">Legs: {currentParlay.legs.length} / 10</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stat Selection Modal */}
+      {showStatModal && selectedPlayer && (
+        <div className="modal-overlay" onClick={closeStatModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add Stat for {selectedPlayer.name}</h3>
+              <button className="modal-close-btn" onClick={closeStatModal}>×</button>
+            </div>
+
+            <div className="modal-body">
+              <div className="modal-field">
+                <label>Select Stat:</label>
+                <select
+                  value={selectedStat}
+                  onChange={(e) => setSelectedStat(e.target.value)}
+                  className="stat-select"
+                >
+                  <option value="">-- Choose a stat --</option>
+                  {getStatsForPosition(selectedPlayer.position).map(stat => (
+                    <option key={stat.value} value={stat.value}>
+                      {stat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="modal-field">
+                <label>Over/Under:</label>
+                <div className="over-under-buttons">
+                  <button
+                    className={`over-under-btn ${overUnder === 'OVER' ? 'active' : ''}`}
+                    onClick={() => setOverUnder('OVER')}
+                  >
+                    OVER
+                  </button>
+                  <button
+                    className={`over-under-btn ${overUnder === 'UNDER' ? 'active' : ''}`}
+                    onClick={() => setOverUnder('UNDER')}
+                  >
+                    UNDER
+                  </button>
+                </div>
+              </div>
+
+              <div className="modal-field">
+                <label>Threshold:</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  placeholder="e.g., 250.5"
+                  value={threshold}
+                  onChange={(e) => setThreshold(e.target.value)}
+                  className="threshold-input"
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="modal-add-btn"
+                onClick={addLegToParlay}
+                disabled={!selectedStat || !threshold}
+              >
+                Add to Parlay
+              </button>
+              <button className="modal-cancel-btn" onClick={closeStatModal}>
+                Cancel
+              </button>
             </div>
           </div>
         </div>
