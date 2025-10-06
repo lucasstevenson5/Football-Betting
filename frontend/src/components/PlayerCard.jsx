@@ -2,6 +2,42 @@ import React, { useState, useEffect } from 'react';
 import './PlayerCard.css';
 import { getTeamColor, getTeamSecondaryColor } from '../utils/teamColors';
 
+// NFL Teams mapping
+const NFL_TEAMS = {
+  'ARI': 'Cardinals',
+  'ATL': 'Falcons',
+  'BAL': 'Ravens',
+  'BUF': 'Bills',
+  'CAR': 'Panthers',
+  'CHI': 'Bears',
+  'CIN': 'Bengals',
+  'CLE': 'Browns',
+  'DAL': 'Cowboys',
+  'DEN': 'Broncos',
+  'DET': 'Lions',
+  'GB': 'Packers',
+  'HOU': 'Texans',
+  'IND': 'Colts',
+  'JAX': 'Jaguars',
+  'KC': 'Chiefs',
+  'LV': 'Raiders',
+  'LAC': 'Chargers',
+  'LAR': 'Rams',
+  'MIA': 'Dolphins',
+  'MIN': 'Vikings',
+  'NE': 'Patriots',
+  'NO': 'Saints',
+  'NYG': 'Giants',
+  'NYJ': 'Jets',
+  'PHI': 'Eagles',
+  'PIT': 'Steelers',
+  'SEA': 'Seahawks',
+  'SF': '49ers',
+  'TB': 'Buccaneers',
+  'TEN': 'Titans',
+  'WAS': 'Commanders'
+};
+
 const PlayerCard = ({ player, onClick }) => {
   const [showStats, setShowStats] = useState(false);
   const [hoverTimer, setHoverTimer] = useState(null);
@@ -59,7 +95,7 @@ const PlayerCard = ({ player, onClick }) => {
               {player.position}
             </span>
             <span className="team" style={{ background: '#000', color: 'white' }}>
-              {player.team}
+              {NFL_TEAMS[player.team] || player.team}
             </span>
           </div>
         </div>
