@@ -47,7 +47,7 @@ def get_yardage_prediction(player_id):
     Get yardage benchmark predictions for a player
     Query params:
         - opponent: Opponent team abbreviation (required)
-        - stat_type: 'receiving_yards', 'rushing_yards', or 'total_yards' (optional)
+        - stat_type: 'receiving_yards', 'rushing_yards', 'passing_yards', or 'total_yards' (optional)
     """
     try:
         opponent = request.args.get('opponent')
@@ -59,12 +59,19 @@ def get_yardage_prediction(player_id):
                 'error': 'Opponent team abbreviation is required'
             }), 400
 
-        # Get yardage predictions
-        prediction = prediction_service.predict_yardage_probabilities(
-            player_id,
-            opponent.upper(),
-            stat_type=stat_type
-        )
+        # Use QB-specific function for passing yards
+        if stat_type == 'passing_yards':
+            prediction = prediction_service.predict_qb_passing_probabilities(
+                player_id,
+                opponent.upper()
+            )
+        else:
+            # Get yardage predictions for other stats
+            prediction = prediction_service.predict_yardage_probabilities(
+                player_id,
+                opponent.upper(),
+                stat_type=stat_type
+            )
 
         return jsonify({
             'success': True,
