@@ -179,13 +179,18 @@ const ParlayBuilder = () => {
           avg_tds_per_game: tdData.avg_tds_per_game
         };
         setPrediction(transformedPrediction);
+      } else if (selectedStat === 'receptions') {
+        // Use receptions API for reception stats
+        response = await apiService.getReceptionsPrediction(
+          selectedPlayer.id,
+          opponent
+        );
+        setPrediction(response.data.prediction);
       } else {
-        // Use yardage API for yardage/receptions/interceptions stats
+        // Use yardage API for yardage/interceptions stats
         let statType = selectedStat;
         if (selectedStat === 'interceptions') {
           statType = 'passing_yards'; // Use passing yards API for interceptions
-        } else if (selectedStat === 'receptions') {
-          statType = 'receiving_yards';
         }
 
         response = await apiService.getYardagePrediction(
@@ -614,6 +619,8 @@ const ParlayBuilder = () => {
                   <p className="prediction-projected">
                     {selectedStat.includes('_tds') ? (
                       `Projected: ${prediction.avg_tds_per_game} TDs`
+                    ) : selectedStat === 'receptions' ? (
+                      `Projected: ${prediction.projected_receptions} receptions`
                     ) : (
                       `Projected: ${prediction.projected_yards} yards`
                     )}

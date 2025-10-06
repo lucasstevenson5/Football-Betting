@@ -445,6 +445,90 @@ class PredictionService:
             'prob_2plus_ints': round(prob_2plus * 100, 2)
         }
 
+    def predict_receptions_probabilities(self, player_id, opponent_team):
+        """
+        Predict receptions probabilities for various thresholds
+
+        Args:
+            player_id: Player database ID
+            opponent_team: Opponent team abbreviation
+
+        Returns:
+            Dictionary with probabilities for each reception benchmark
+        """
+        # Receptions benchmarks
+        RECEPTIONS_BENCHMARKS = [2, 3, 4, 5, 6, 7, 8, 10, 12, 15]
+
+        # Get player reception stats
+        player_mean, player_std, recent_values = self.get_player_stats_weighted(
+            player_id, stat_type='receiving_yards', limit=20  # Use receiving_yards to get reception data
+        )
+
+        # Get actual reception counts from stats
+        stats = PlayerStats.query.filter(
+            PlayerStats.player_id == player_id,
+            PlayerStats.week.isnot(None)
+        ).order_by(
+            PlayerStats.season.desc(),
+            PlayerStats.week.desc()
+        ).limit(20).all()
+
+        if not stats:
+            return {benchmark: 0.0 for benchmark in RECEPTIONS_BENCHMARKS}
+
+        # Extract reception values
+        reception_values = [stat.receptions or 0 for stat in stats]
+
+        # Calculate time weights
+        games_data = [{'season': stat.season, 'week': stat.week} for stat in stats]
+        current_season = games_data[0]['season']
+        current_week = games_data[0]['week']
+        weights = self.calculate_time_weights(games_data, current_season, current_week)
+
+        # Weighted statistics
+        reception_values = np.array(reception_values)
+        weighted_mean = np.average(reception_values, weights=weights)
+        weighted_variance = np.average((reception_values - weighted_mean) ** 2, weights=weights)
+        weighted_std = np.sqrt(weighted_variance)
+
+        if weighted_mean == 0:
+            return {
+                'probabilities': {benchmark: 0.0 for benchmark in RECEPTIONS_BENCHMARKS},
+                'projected_receptions': 0.0,
+                'player_avg': 0.0
+            }
+
+        # Get opponent defensive stats (passing defense as proxy)
+        def_mean, def_std = self.get_defensive_stats(opponent_team, stat_type='passing')
+
+        # Adjust player mean based on opponent defense
+        if def_mean is not None:
+            league_avg = 250  # League average passing yards allowed
+            defensive_factor = def_mean / league_avg if league_avg > 0 else 1.0
+            adjusted_mean = weighted_mean * defensive_factor
+        else:
+            adjusted_mean = weighted_mean
+
+        # Use player's std dev for distribution
+        if weighted_std < 1:
+            weighted_std = max(weighted_std, adjusted_mean * 0.3)
+
+        # Calculate probabilities using normal distribution
+        probabilities = {}
+
+        for benchmark in RECEPTIONS_BENCHMARKS:
+            z_score = (benchmark - adjusted_mean) / weighted_std if weighted_std > 0 else 0
+            prob = 1 - scipy_stats.norm.cdf(z_score)
+            probabilities[benchmark] = round(prob * 100, 2)
+
+        return {
+            'probabilities': probabilities,
+            'projected_receptions': round(adjusted_mean, 1),
+            'player_avg': round(weighted_mean, 1),
+            'opponent_avg_allowed': round(def_mean, 1) if def_mean else None,
+            'consistency_score': round(1 / (1 + weighted_std / weighted_mean), 2) if weighted_mean > 0 else 0
+        }
+
     def get_player_prediction(self, player_id, opponent_team):
         """
         Get complete prediction for a player against an opponent

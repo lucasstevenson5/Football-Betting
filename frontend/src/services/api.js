@@ -39,6 +39,8 @@ export const apiService = {
     api.get(`/predictions/yardage/${playerId}`, { params: { opponent, stat_type: statType } }),
   getTouchdownPrediction: (playerId, opponent) =>
     api.get(`/predictions/touchdown/${playerId}`, { params: { opponent } }),
+  getReceptionsPrediction: (playerId, opponent) =>
+    api.get(`/predictions/receptions/${playerId}`, { params: { opponent } }),
 };
 
 export default api;

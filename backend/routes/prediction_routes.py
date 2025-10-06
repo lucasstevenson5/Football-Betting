@@ -85,6 +85,40 @@ def get_yardage_prediction(player_id):
         }), 500
 
 
+@prediction_bp.route('/receptions/<int:player_id>', methods=['GET'])
+def get_receptions_prediction(player_id):
+    """
+    Get receptions benchmark predictions for a player
+    Query params:
+        - opponent: Opponent team abbreviation (required)
+    """
+    try:
+        opponent = request.args.get('opponent')
+
+        if not opponent:
+            return jsonify({
+                'success': False,
+                'error': 'Opponent team abbreviation is required'
+            }), 400
+
+        # Get receptions predictions
+        prediction = prediction_service.predict_receptions_probabilities(
+            player_id,
+            opponent.upper()
+        )
+
+        return jsonify({
+            'success': True,
+            'prediction': prediction
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @prediction_bp.route('/touchdown/<int:player_id>', methods=['GET'])
 def get_touchdown_prediction(player_id):
     """
