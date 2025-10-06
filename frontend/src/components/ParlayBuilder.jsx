@@ -162,23 +162,39 @@ const ParlayBuilder = () => {
     try {
       setLoadingPrediction(true);
 
-      // Determine stat type for API
-      let statType = selectedStat;
-      if (selectedStat === 'passing_tds' || selectedStat === 'interceptions') {
-        statType = 'passing_yards'; // Use passing yards API for QB stats
-      } else if (selectedStat === 'rushing_tds') {
-        statType = 'rushing_yards';
-      } else if (selectedStat === 'receiving_tds' || selectedStat === 'receptions') {
-        statType = 'receiving_yards';
+      let response;
+
+      // Check if it's a TD stat - use TD API which returns different format
+      if (selectedStat === 'passing_tds' || selectedStat === 'rushing_tds' || selectedStat === 'receiving_tds') {
+        response = await apiService.getTouchdownPrediction(
+          selectedPlayer.id,
+          opponent
+        );
+
+        // Transform TD response to match yardage format for consistency
+        const tdData = response.data.prediction;
+        const transformedPrediction = {
+          probabilities: tdData.td_probabilities || { 1: tdData.td_probability || 0 },
+          projected_tds: tdData.avg_tds_per_game,
+          avg_tds_per_game: tdData.avg_tds_per_game
+        };
+        setPrediction(transformedPrediction);
+      } else {
+        // Use yardage API for yardage/receptions/interceptions stats
+        let statType = selectedStat;
+        if (selectedStat === 'interceptions') {
+          statType = 'passing_yards'; // Use passing yards API for interceptions
+        } else if (selectedStat === 'receptions') {
+          statType = 'receiving_yards';
+        }
+
+        response = await apiService.getYardagePrediction(
+          selectedPlayer.id,
+          opponent,
+          statType
+        );
+        setPrediction(response.data.prediction);
       }
-
-      const response = await apiService.getYardagePrediction(
-        selectedPlayer.id,
-        opponent,
-        statType
-      );
-
-      setPrediction(response.data.prediction);
     } catch (error) {
       console.error('Error fetching prediction:', error);
       setPrediction(null);
@@ -596,7 +612,11 @@ const ParlayBuilder = () => {
                     {calculateProbability(threshold, overUnder, prediction)?.toFixed(1)}%
                   </p>
                   <p className="prediction-projected">
-                    Projected: {prediction.projected_yards} yards
+                    {selectedStat.includes('_tds') ? (
+                      `Projected: ${prediction.avg_tds_per_game} TDs`
+                    ) : (
+                      `Projected: ${prediction.projected_yards} yards`
+                    )}
                   </p>
                 </div>
               )}
