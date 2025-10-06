@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { apiService } from '../services/api';
 import './ParlayBuilder.css';
 
 const ParlayBuilder = () => {
   const [parlays, setParlays] = useState([]);
   const [currentParlay, setCurrentParlay] = useState(null);
   const [isBuilding, setIsBuilding] = useState(false);
+
+  // Player search state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPosition, setSelectedPosition] = useState('ALL');
+  const [players, setPlayers] = useState([]);
+  const [loadingPlayers, setLoadingPlayers] = useState(false);
+  const [selectedSeason, setSelectedSeason] = useState(2025);
 
   // Load saved parlays from localStorage on mount
   useEffect(() => {
@@ -48,6 +56,40 @@ const ParlayBuilder = () => {
     setParlays(parlays.filter(p => p.id !== parlayId));
   };
 
+  // Fetch players when building a parlay
+  useEffect(() => {
+    if (isBuilding) {
+      fetchPlayers();
+    }
+  }, [isBuilding, selectedPosition]);
+
+  const fetchPlayers = async () => {
+    try {
+      setLoadingPlayers(true);
+      const params = {
+        season: selectedSeason,
+        limit: 100,
+        sort_by: selectedPosition === 'QB' ? 'passing_yards' : selectedPosition === 'RB' ? 'rushing_yards' : 'receiving_yards'
+      };
+
+      if (selectedPosition !== 'ALL') {
+        params.position = selectedPosition;
+      }
+
+      const response = await apiService.getCurrentSeasonPlayers(params);
+      setPlayers(response.data.players);
+    } catch (error) {
+      console.error('Error fetching players:', error);
+    } finally {
+      setLoadingPlayers(false);
+    }
+  };
+
+  // Filter players by search term
+  const filteredPlayers = players.filter(player =>
+    player.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="parlay-builder-container">
       <div className="parlay-builder-header">
@@ -79,10 +121,70 @@ const ParlayBuilder = () => {
             </div>
           </div>
 
-          {/* TODO: Add Player Search and Leg Builder */}
+          {/* Player Search and Leg Builder */}
           <div className="builder-content">
-            <p className="placeholder-text">Player search and stat selection coming next...</p>
-            <p className="leg-count">Legs: {currentParlay.legs.length} / 10</p>
+            {/* Search Filters */}
+            <div className="player-search-section">
+              <h3>Add Player to Parlay</h3>
+
+              {/* Position Filter */}
+              <div className="position-filter">
+                <label>Position:</label>
+                <div className="position-buttons">
+                  {['ALL', 'QB', 'RB', 'WR', 'TE'].map(pos => (
+                    <button
+                      key={pos}
+                      className={`position-filter-btn ${selectedPosition === pos ? 'active' : ''}`}
+                      onClick={() => setSelectedPosition(pos)}
+                    >
+                      {pos}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Name Search */}
+              <div className="name-search">
+                <label>Search Player:</label>
+                <input
+                  type="text"
+                  placeholder="Type player name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="search-input"
+                />
+              </div>
+
+              {/* Player List */}
+              <div className="player-results">
+                {loadingPlayers ? (
+                  <p className="loading-text">Loading players...</p>
+                ) : filteredPlayers.length === 0 ? (
+                  <p className="no-results">No players found</p>
+                ) : (
+                  <div className="player-list">
+                    {filteredPlayers.slice(0, 20).map(player => (
+                      <div key={player.id} className="player-result-item">
+                        <div className="player-result-info">
+                          <span className="player-result-name">{player.name}</span>
+                          <span className="player-result-meta">
+                            {player.position} - {player.team}
+                          </span>
+                        </div>
+                        <button className="add-player-btn">
+                          Add +
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Leg Count */}
+            <div className="leg-counter">
+              <p className="leg-count">Legs: {currentParlay.legs.length} / 10</p>
+            </div>
           </div>
         </div>
       )}
