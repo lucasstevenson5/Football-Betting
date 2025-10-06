@@ -768,15 +768,90 @@
   color: #666;
 }
 
-.parlay-legs-count {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 8px;
+/* Saved Parlay Legs */
+.saved-parlay-legs {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e5e7eb;
 }
 
-.parlay-bet {
-  font-size: 1rem;
-  font-weight: 500;
+.saved-leg {
+  display: flex;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.saved-leg:last-child {
+  border-bottom: none;
+}
+
+.leg-number {
+  font-weight: 700;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.saved-leg-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.saved-leg-player {
+  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 0.95rem;
+}
+
+.saved-leg-stat {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.saved-leg-prob {
+  color: #10b981;
+  font-weight: 700;
+}
+
+/* Saved Parlay Summary */
+.saved-parlay-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.saved-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.saved-summary-row.total {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 2px solid #e5e7eb;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.saved-summary-highlight {
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.saved-summary-highlight.green {
+  color: #10b981;
+}
+
+.saved-summary-highlight.blue {
+  color: #3b82f6;
+}
+
+.saved-summary-highlight.orange {
+  color: #f59e0b;
 }
 
 @media (max-width: 768px) {

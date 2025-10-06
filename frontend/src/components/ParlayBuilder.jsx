@@ -34,9 +34,7 @@ const ParlayBuilder = () => {
 
   // Save parlays to localStorage whenever they change
   useEffect(() => {
-    if (parlays.length > 0) {
-      localStorage.setItem('parlays', JSON.stringify(parlays));
-    }
+    localStorage.setItem('parlays', JSON.stringify(parlays));
   }, [parlays]);
 
   const startNewParlay = () => {
@@ -630,24 +628,72 @@ const ParlayBuilder = () => {
           </div>
         ) : (
           <div className="parlays-grid">
-            {parlays.map(parlay => (
-              <div key={parlay.id} className="parlay-card">
-                <div className="parlay-card-header">
-                  <h3>Parlay - {new Date(parlay.createdAt).toLocaleDateString()}</h3>
-                  <button
-                    className="delete-parlay-btn"
-                    onClick={() => deleteParlay(parlay.id)}
-                  >
-                    ×
-                  </button>
+            {parlays.map(parlay => {
+              const combinedProb = calculateCombinedProbability(parlay.legs);
+              const americanOdds = probabilityToAmericanOdds(combinedProb);
+              const payout = calculatePayout(americanOdds, parlay.betAmount);
+
+              return (
+                <div key={parlay.id} className="parlay-card">
+                  <div className="parlay-card-header">
+                    <h3>Parlay - {new Date(parlay.createdAt).toLocaleDateString()}</h3>
+                    <button
+                      className="delete-parlay-btn"
+                      onClick={() => deleteParlay(parlay.id)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="parlay-card-body">
+                    {/* Legs */}
+                    <div className="saved-parlay-legs">
+                      {parlay.legs.map((leg, index) => (
+                        <div key={leg.id} className="saved-leg">
+                          <span className="leg-number">{index + 1}.</span>
+                          <div className="saved-leg-content">
+                            <div className="saved-leg-player">
+                              {leg.playerName} ({leg.position} - {leg.playerTeam})
+                            </div>
+                            <div className="saved-leg-stat">
+                              {leg.overUnder} {leg.threshold} {leg.statLabel} vs {leg.opponent}
+                              {leg.probability && (
+                                <span className="saved-leg-prob"> • {leg.probability.toFixed(1)}%</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Summary */}
+                    <div className="saved-parlay-summary">
+                      <div className="saved-summary-row">
+                        <span>Bet Amount:</span>
+                        <span className="saved-summary-highlight">${parlay.betAmount}</span>
+                      </div>
+                      <div className="saved-summary-row">
+                        <span>Combined Probability:</span>
+                        <span className="saved-summary-highlight green">{combinedProb.toFixed(2)}%</span>
+                      </div>
+                      <div className="saved-summary-row">
+                        <span>American Odds:</span>
+                        <span className="saved-summary-highlight blue">{formatAmericanOdds(americanOdds)}</span>
+                      </div>
+                      <div className="saved-summary-row">
+                        <span>Potential Payout:</span>
+                        <span className="saved-summary-highlight orange">${payout.toFixed(2)}</span>
+                      </div>
+                      <div className="saved-summary-row total">
+                        <span>Total Return:</span>
+                        <span className="saved-summary-highlight green">
+                          ${(parseFloat(parlay.betAmount) + payout).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="parlay-card-body">
-                  <p className="parlay-legs-count">{parlay.legs.length} Legs</p>
-                  <p className="parlay-bet">Bet: ${parlay.betAmount}</p>
-                  {/* TODO: Show legs, odds, probability, payout */}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
