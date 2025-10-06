@@ -2,6 +2,42 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import './ParlayBuilder.css';
 
+// NFL Teams mapping (team name without location -> abbreviation)
+const NFL_TEAMS = [
+  { name: 'Cardinals', abbr: 'ARI' },
+  { name: 'Falcons', abbr: 'ATL' },
+  { name: 'Ravens', abbr: 'BAL' },
+  { name: 'Bills', abbr: 'BUF' },
+  { name: 'Panthers', abbr: 'CAR' },
+  { name: 'Bears', abbr: 'CHI' },
+  { name: 'Bengals', abbr: 'CIN' },
+  { name: 'Browns', abbr: 'CLE' },
+  { name: 'Cowboys', abbr: 'DAL' },
+  { name: 'Broncos', abbr: 'DEN' },
+  { name: 'Lions', abbr: 'DET' },
+  { name: 'Packers', abbr: 'GB' },
+  { name: 'Texans', abbr: 'HOU' },
+  { name: 'Colts', abbr: 'IND' },
+  { name: 'Jaguars', abbr: 'JAX' },
+  { name: 'Chiefs', abbr: 'KC' },
+  { name: 'Raiders', abbr: 'LV' },
+  { name: 'Chargers', abbr: 'LAC' },
+  { name: 'Rams', abbr: 'LAR' },
+  { name: 'Dolphins', abbr: 'MIA' },
+  { name: 'Vikings', abbr: 'MIN' },
+  { name: 'Patriots', abbr: 'NE' },
+  { name: 'Saints', abbr: 'NO' },
+  { name: 'Giants', abbr: 'NYG' },
+  { name: 'Jets', abbr: 'NYJ' },
+  { name: 'Eagles', abbr: 'PHI' },
+  { name: 'Steelers', abbr: 'PIT' },
+  { name: 'Seahawks', abbr: 'SEA' },
+  { name: '49ers', abbr: 'SF' },
+  { name: 'Buccaneers', abbr: 'TB' },
+  { name: 'Titans', abbr: 'TEN' },
+  { name: 'Commanders', abbr: 'WAS' }
+].sort((a, b) => a.name.localeCompare(b.name));
+
 const ParlayBuilder = () => {
   const [parlays, setParlays] = useState([]);
   const [currentParlay, setCurrentParlay] = useState(null);
@@ -259,6 +295,9 @@ const ParlayBuilder = () => {
     // Calculate probability for this leg
     const probability = prediction ? calculateProbability(threshold, overUnder, prediction) : null;
 
+    // Get opponent team name for display
+    const opponentTeam = NFL_TEAMS.find(t => t.abbr === opponent);
+
     const newLeg = {
       id: Date.now(),
       playerId: selectedPlayer.id,
@@ -269,7 +308,8 @@ const ParlayBuilder = () => {
       statLabel: getStatsForPosition(selectedPlayer.position).find(s => s.value === selectedStat)?.label,
       threshold: parseFloat(threshold),
       overUnder: overUnder,
-      opponent: opponent.toUpperCase(),
+      opponent: opponent,
+      opponentName: opponentTeam ? opponentTeam.name : opponent,
       probability: probability
     };
 
@@ -448,8 +488,8 @@ const ParlayBuilder = () => {
                           <span className="leg-stat-text">
                             {leg.overUnder} {leg.threshold} {leg.statLabel}
                           </span>
-                          {leg.opponent && (
-                            <span className="leg-opponent"> vs {leg.opponent}</span>
+                          {leg.opponentName && (
+                            <span className="leg-opponent"> vs {leg.opponentName}</span>
                           )}
                           {leg.probability !== null && (
                             <span className="leg-probability"> • {leg.probability.toFixed(1)}%</span>
@@ -547,15 +587,19 @@ const ParlayBuilder = () => {
 
             <div className="modal-body">
               <div className="modal-field">
-                <label>Opponent Team (e.g., BAL, KC, SF):</label>
-                <input
-                  type="text"
-                  placeholder="Team abbreviation"
+                <label>Opponent Team:</label>
+                <select
                   value={opponent}
-                  onChange={(e) => setOpponent(e.target.value.toUpperCase())}
-                  className="opponent-input"
-                  maxLength={3}
-                />
+                  onChange={(e) => setOpponent(e.target.value)}
+                  className="opponent-select"
+                >
+                  <option value="">-- Select opponent --</option>
+                  {NFL_TEAMS.map(team => (
+                    <option key={team.abbr} value={team.abbr}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="modal-field">
@@ -682,7 +726,7 @@ const ParlayBuilder = () => {
                               {leg.playerName} ({leg.position} - {leg.playerTeam})
                             </div>
                             <div className="saved-leg-stat">
-                              {leg.overUnder} {leg.threshold} {leg.statLabel} vs {leg.opponent}
+                              {leg.overUnder} {leg.threshold} {leg.statLabel} vs {leg.opponentName || leg.opponent}
                               {leg.probability && (
                                 <span className="saved-leg-prob"> • {leg.probability.toFixed(1)}%</span>
                               )}

@@ -558,7 +558,8 @@
 
 .stat-select,
 .threshold-input,
-.opponent-input {
+.opponent-input,
+.opponent-select {
   padding: 12px 16px;
   border: 2px solid #d1d5db;
   border-radius: 8px;
@@ -568,13 +569,10 @@
 
 .stat-select:focus,
 .threshold-input:focus,
-.opponent-input:focus {
+.opponent-input:focus,
+.opponent-select:focus {
   outline: none;
   border-color: #3b82f6;
-}
-
-.opponent-input {
-  text-transform: uppercase;
 }
 
 .over-under-buttons {
