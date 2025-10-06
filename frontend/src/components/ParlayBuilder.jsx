@@ -20,6 +20,9 @@ const ParlayBuilder = () => {
   const [selectedStat, setSelectedStat] = useState('');
   const [threshold, setThreshold] = useState('');
   const [overUnder, setOverUnder] = useState('OVER');
+  const [opponent, setOpponent] = useState('');
+  const [loadingPrediction, setLoadingPrediction] = useState(false);
+  const [prediction, setPrediction] = useState(null);
 
   // Load saved parlays from localStorage on mount
   useEffect(() => {
@@ -133,6 +136,8 @@ const ParlayBuilder = () => {
     setSelectedStat('');
     setThreshold('');
     setOverUnder('OVER');
+    setOpponent('');
+    setPrediction(null);
   };
 
   // Close stat modal
@@ -142,15 +147,98 @@ const ParlayBuilder = () => {
     setSelectedStat('');
     setThreshold('');
     setOverUnder('OVER');
+    setOpponent('');
+    setPrediction(null);
+  };
+
+  // Fetch prediction when stat and opponent are selected
+  useEffect(() => {
+    if (selectedPlayer && selectedStat && opponent && showStatModal) {
+      fetchPrediction();
+    }
+  }, [selectedStat, opponent]);
+
+  const fetchPrediction = async () => {
+    if (!selectedPlayer || !selectedStat || !opponent) return;
+
+    try {
+      setLoadingPrediction(true);
+
+      // Determine stat type for API
+      let statType = selectedStat;
+      if (selectedStat === 'passing_tds' || selectedStat === 'interceptions') {
+        statType = 'passing_yards'; // Use passing yards API for QB stats
+      } else if (selectedStat === 'rushing_tds') {
+        statType = 'rushing_yards';
+      } else if (selectedStat === 'receiving_tds' || selectedStat === 'receptions') {
+        statType = 'receiving_yards';
+      }
+
+      const response = await apiService.getYardagePrediction(
+        selectedPlayer.id,
+        opponent,
+        statType
+      );
+
+      setPrediction(response.data.prediction);
+    } catch (error) {
+      console.error('Error fetching prediction:', error);
+      setPrediction(null);
+    } finally {
+      setLoadingPrediction(false);
+    }
+  };
+
+  // Calculate probability for a specific threshold
+  const calculateProbability = (threshold, overUnder, prediction) => {
+    if (!prediction || !prediction.probabilities) return null;
+
+    const benchmarks = Object.keys(prediction.probabilities).map(Number).sort((a, b) => a - b);
+    const thresholdNum = parseFloat(threshold);
+
+    // Find closest benchmarks
+    let lowerBenchmark = benchmarks[0];
+    let upperBenchmark = benchmarks[benchmarks.length - 1];
+
+    for (let i = 0; i < benchmarks.length - 1; i++) {
+      if (benchmarks[i] <= thresholdNum && thresholdNum <= benchmarks[i + 1]) {
+        lowerBenchmark = benchmarks[i];
+        upperBenchmark = benchmarks[i + 1];
+        break;
+      }
+    }
+
+    // Interpolate probability
+    let probability;
+    if (thresholdNum <= lowerBenchmark) {
+      probability = prediction.probabilities[lowerBenchmark];
+    } else if (thresholdNum >= upperBenchmark) {
+      probability = prediction.probabilities[upperBenchmark];
+    } else {
+      const lowerProb = prediction.probabilities[lowerBenchmark];
+      const upperProb = prediction.probabilities[upperBenchmark];
+      const ratio = (thresholdNum - lowerBenchmark) / (upperBenchmark - lowerBenchmark);
+      probability = lowerProb - (ratio * (lowerProb - upperProb));
+    }
+
+    // If UNDER, use 1 - probability
+    if (overUnder === 'UNDER') {
+      probability = 100 - probability;
+    }
+
+    return Math.max(0, Math.min(100, probability));
   };
 
   // Add leg to parlay
   const addLegToParlay = () => {
-    if (!selectedPlayer || !selectedStat || !threshold) return;
+    if (!selectedPlayer || !selectedStat || !threshold || !opponent) return;
     if (currentParlay.legs.length >= 10) {
       alert('Maximum 10 legs per parlay');
       return;
     }
+
+    // Calculate probability for this leg
+    const probability = prediction ? calculateProbability(threshold, overUnder, prediction) : null;
 
     const newLeg = {
       id: Date.now(),
@@ -162,7 +250,8 @@ const ParlayBuilder = () => {
       statLabel: getStatsForPosition(selectedPlayer.position).find(s => s.value === selectedStat)?.label,
       threshold: parseFloat(threshold),
       overUnder: overUnder,
-      probability: null // Will be calculated when we fetch predictions
+      opponent: opponent.toUpperCase(),
+      probability: probability
     };
 
     setCurrentParlay({
@@ -291,6 +380,12 @@ const ParlayBuilder = () => {
                           <span className="leg-stat-text">
                             {leg.overUnder} {leg.threshold} {leg.statLabel}
                           </span>
+                          {leg.opponent && (
+                            <span className="leg-opponent"> vs {leg.opponent}</span>
+                          )}
+                          {leg.probability !== null && (
+                            <span className="leg-probability"> • {leg.probability.toFixed(1)}%</span>
+                          )}
                         </div>
                       </div>
                       <button
@@ -323,6 +418,18 @@ const ParlayBuilder = () => {
             </div>
 
             <div className="modal-body">
+              <div className="modal-field">
+                <label>Opponent Team (e.g., BAL, KC, SF):</label>
+                <input
+                  type="text"
+                  placeholder="Team abbreviation"
+                  value={opponent}
+                  onChange={(e) => setOpponent(e.target.value.toUpperCase())}
+                  className="opponent-input"
+                  maxLength={3}
+                />
+              </div>
+
               <div className="modal-field">
                 <label>Select Stat:</label>
                 <select
@@ -368,13 +475,31 @@ const ParlayBuilder = () => {
                   className="threshold-input"
                 />
               </div>
+
+              {loadingPrediction && (
+                <div className="prediction-loading">
+                  Loading probability...
+                </div>
+              )}
+
+              {prediction && threshold && (
+                <div className="prediction-display">
+                  <p className="prediction-label">Predicted Probability:</p>
+                  <p className="prediction-value">
+                    {calculateProbability(threshold, overUnder, prediction)?.toFixed(1)}%
+                  </p>
+                  <p className="prediction-projected">
+                    Projected: {prediction.projected_yards} yards
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="modal-footer">
               <button
                 className="modal-add-btn"
                 onClick={addLegToParlay}
-                disabled={!selectedStat || !threshold}
+                disabled={!selectedStat || !threshold || !opponent}
               >
                 Add to Parlay
               </button>
