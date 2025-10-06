@@ -2,13 +2,41 @@ import { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import './PredictionDisplay.css';
 
-// NFL team abbreviations
+// NFL Teams mapping (team name without location -> abbreviation)
 const NFL_TEAMS = [
-  'ARI', 'ATL', 'BAL', 'BUF', 'CAR', 'CHI', 'CIN', 'CLE',
-  'DAL', 'DEN', 'DET', 'GB', 'HOU', 'IND', 'JAX', 'KC',
-  'LV', 'LAC', 'LAR', 'MIA', 'MIN', 'NE', 'NO', 'NYG',
-  'NYJ', 'PHI', 'PIT', 'SF', 'SEA', 'TB', 'TEN', 'WAS'
-];
+  { name: 'Cardinals', abbr: 'ARI' },
+  { name: 'Falcons', abbr: 'ATL' },
+  { name: 'Ravens', abbr: 'BAL' },
+  { name: 'Bills', abbr: 'BUF' },
+  { name: 'Panthers', abbr: 'CAR' },
+  { name: 'Bears', abbr: 'CHI' },
+  { name: 'Bengals', abbr: 'CIN' },
+  { name: 'Browns', abbr: 'CLE' },
+  { name: 'Cowboys', abbr: 'DAL' },
+  { name: 'Broncos', abbr: 'DEN' },
+  { name: 'Lions', abbr: 'DET' },
+  { name: 'Packers', abbr: 'GB' },
+  { name: 'Texans', abbr: 'HOU' },
+  { name: 'Colts', abbr: 'IND' },
+  { name: 'Jaguars', abbr: 'JAX' },
+  { name: 'Chiefs', abbr: 'KC' },
+  { name: 'Raiders', abbr: 'LV' },
+  { name: 'Chargers', abbr: 'LAC' },
+  { name: 'Rams', abbr: 'LAR' },
+  { name: 'Dolphins', abbr: 'MIA' },
+  { name: 'Vikings', abbr: 'MIN' },
+  { name: 'Patriots', abbr: 'NE' },
+  { name: 'Saints', abbr: 'NO' },
+  { name: 'Giants', abbr: 'NYG' },
+  { name: 'Jets', abbr: 'NYJ' },
+  { name: 'Eagles', abbr: 'PHI' },
+  { name: 'Steelers', abbr: 'PIT' },
+  { name: 'Seahawks', abbr: 'SEA' },
+  { name: '49ers', abbr: 'SF' },
+  { name: 'Buccaneers', abbr: 'TB' },
+  { name: 'Titans', abbr: 'TEN' },
+  { name: 'Commanders', abbr: 'WAS' }
+].sort((a, b) => a.name.localeCompare(b.name));
 
 const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
   const [opponent, setOpponent] = useState('');
@@ -54,7 +82,7 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
   };
 
   // Filter out player's own team
-  const availableOpponents = NFL_TEAMS.filter(team => team !== playerTeam);
+  const availableOpponents = NFL_TEAMS.filter(team => team.abbr !== playerTeam);
 
   return (
     <div className="prediction-section">
@@ -70,7 +98,7 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
         >
           <option value="">-- Choose Opponent --</option>
           {availableOpponents.map((team) => (
-            <option key={team} value={team}>{team}</option>
+            <option key={team.abbr} value={team.abbr}>{team.name}</option>
           ))}
         </select>
       </div>
