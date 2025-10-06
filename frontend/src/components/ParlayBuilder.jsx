@@ -270,6 +270,55 @@ const ParlayBuilder = () => {
     });
   };
 
+  // Calculate combined probability (multiply all leg probabilities)
+  const calculateCombinedProbability = (legs) => {
+    if (!legs || legs.length === 0) return 0;
+
+    const validLegs = legs.filter(leg => leg.probability !== null);
+    if (validLegs.length === 0) return 0;
+
+    // Multiply all probabilities (convert from percentage to decimal first)
+    const combined = validLegs.reduce((acc, leg) => {
+      return acc * (leg.probability / 100);
+    }, 1);
+
+    return combined * 100; // Convert back to percentage
+  };
+
+  // Convert probability to American odds
+  const probabilityToAmericanOdds = (probability) => {
+    if (!probability || probability <= 0 || probability >= 100) return null;
+
+    const decimal = probability / 100;
+
+    if (decimal >= 0.5) {
+      // Favorite (negative odds)
+      return Math.round(-decimal / (1 - decimal) * 100);
+    } else {
+      // Underdog (positive odds)
+      return Math.round((1 - decimal) / decimal * 100);
+    }
+  };
+
+  // Calculate potential payout based on American odds and bet amount
+  const calculatePayout = (americanOdds, betAmount) => {
+    if (!americanOdds || !betAmount) return 0;
+
+    if (americanOdds > 0) {
+      // Underdog
+      return betAmount * (americanOdds / 100);
+    } else {
+      // Favorite
+      return betAmount * (100 / Math.abs(americanOdds));
+    }
+  };
+
+  // Format American odds with + or - sign
+  const formatAmericanOdds = (odds) => {
+    if (!odds) return 'N/A';
+    return odds > 0 ? `+${odds}` : `${odds}`;
+  };
+
   return (
     <div className="parlay-builder-container">
       <div className="parlay-builder-header">
@@ -396,6 +445,66 @@ const ParlayBuilder = () => {
                       </button>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Parlay Summary */}
+            {currentParlay.legs.length > 0 && (
+              <div className="parlay-summary">
+                <h3>Parlay Summary</h3>
+                <div className="summary-grid">
+                  <div className="summary-item">
+                    <span className="summary-label">Bet Amount:</span>
+                    <div className="bet-amount-input">
+                      <span>$</span>
+                      <input
+                        type="number"
+                        value={currentParlay.betAmount}
+                        onChange={(e) => setCurrentParlay({
+                          ...currentParlay,
+                          betAmount: parseFloat(e.target.value) || 10
+                        })}
+                        className="bet-amount-field"
+                        min="1"
+                        step="1"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="summary-item">
+                    <span className="summary-label">Combined Probability:</span>
+                    <span className="summary-value probability">
+                      {calculateCombinedProbability(currentParlay.legs).toFixed(2)}%
+                    </span>
+                  </div>
+
+                  <div className="summary-item">
+                    <span className="summary-label">American Odds:</span>
+                    <span className="summary-value odds">
+                      {formatAmericanOdds(probabilityToAmericanOdds(calculateCombinedProbability(currentParlay.legs)))}
+                    </span>
+                  </div>
+
+                  <div className="summary-item">
+                    <span className="summary-label">Potential Payout:</span>
+                    <span className="summary-value payout">
+                      ${ calculatePayout(
+                        probabilityToAmericanOdds(calculateCombinedProbability(currentParlay.legs)),
+                        currentParlay.betAmount
+                      ).toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="summary-item">
+                    <span className="summary-label">Total Return:</span>
+                    <span className="summary-value total">
+                      ${(parseFloat(currentParlay.betAmount) + calculatePayout(
+                        probabilityToAmericanOdds(calculateCombinedProbability(currentParlay.legs)),
+                        currentParlay.betAmount
+                      )).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}

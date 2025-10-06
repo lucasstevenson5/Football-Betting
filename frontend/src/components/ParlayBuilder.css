@@ -376,6 +376,92 @@
   color: white;
 }
 
+/* Parlay Summary */
+.parlay-summary {
+  margin-top: 32px;
+  padding: 24px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 2px solid #3b82f6;
+  border-radius: 12px;
+}
+
+.parlay-summary h3 {
+  margin: 0 0 20px 0;
+  font-size: 1.4rem;
+  color: #1a1a1a;
+  font-weight: 700;
+  text-align: center;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: white;
+  border-radius: 8px;
+}
+
+.summary-label {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summary-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+
+.summary-value.probability {
+  color: #10b981;
+}
+
+.summary-value.odds {
+  color: #3b82f6;
+}
+
+.summary-value.payout {
+  color: #f59e0b;
+}
+
+.summary-value.total {
+  color: #10b981;
+}
+
+.bet-amount-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+
+.bet-amount-field {
+  width: 100px;
+  padding: 4px 8px;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+
+.bet-amount-field:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
 /* Leg Counter */
 .leg-counter {
   margin-top: 20px;
