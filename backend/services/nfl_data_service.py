@@ -41,23 +41,33 @@ class NFLDataService:
         Returns:
             DataFrame with player statistics
         """
-        try:
-            print(f"Fetching player stats for seasons: {seasons}")
+        all_stats = []
 
-            # Fetch weekly player stats
-            # This includes passing, receiving and rushing stats for all players
-            weekly_stats = nfl.import_weekly_data(seasons)
+        # Fetch each season individually to handle missing data gracefully
+        for season in seasons:
+            try:
+                print(f"Fetching player stats for season: {season}")
+                weekly_stats = nfl.import_weekly_data([season])
 
-            # Filter for relevant positions (QB, RB, WR, TE)
-            relevant_positions = ['QB', 'RB', 'WR', 'TE']
-            weekly_stats = weekly_stats[weekly_stats['position'].isin(relevant_positions)]
+                # Filter for relevant positions (QB, RB, WR, TE)
+                relevant_positions = ['QB', 'RB', 'WR', 'TE']
+                weekly_stats = weekly_stats[weekly_stats['position'].isin(relevant_positions)]
 
-            print(f"Fetched {len(weekly_stats)} player stat records")
-            return weekly_stats
+                all_stats.append(weekly_stats)
+                print(f"✓ Fetched {len(weekly_stats)} records for {season}")
 
-        except Exception as e:
-            print(f"Error fetching player stats: {e}")
-            raise
+            except Exception as e:
+                print(f"⚠ Skipping season {season}: {e}")
+                # Continue with next season instead of failing completely
+                continue
+
+        if not all_stats:
+            raise Exception("No data could be fetched for any season")
+
+        # Combine all successfully fetched seasons
+        combined_stats = pd.concat(all_stats, ignore_index=True)
+        print(f"✓ Total: Fetched {len(combined_stats)} player stat records across {len(all_stats)} seasons")
+        return combined_stats
 
     @staticmethod
     def fetch_team_stats(seasons):
@@ -71,36 +81,53 @@ class NFLDataService:
         Returns:
             DataFrame with team defensive statistics
         """
-        try:
-            print(f"Fetching team defensive stats for seasons: {seasons}")
+        all_schedules = []
+        all_pbp = []
 
-            # Get schedules for points allowed
-            schedules = nfl.import_schedules(seasons)
+        # Fetch each season individually to handle missing data gracefully
+        for season in seasons:
+            try:
+                print(f"Fetching team stats for season: {season}")
+                schedules = nfl.import_schedules([season])
+                pbp = nfl.import_pbp_data([season], downcast=True)
 
-            # Get PBP data for yards allowed
-            pbp = nfl.import_pbp_data(seasons, downcast=True)
+                all_schedules.append(schedules)
+                all_pbp.append(pbp)
+                print(f"✓ Fetched team stats for {season}")
 
-            all_team_stats = []
+            except Exception as e:
+                print(f"⚠ Skipping season {season} team stats: {e}")
+                continue
 
-            # Get all unique teams
-            teams = pd.concat([schedules['home_team'], schedules['away_team']]).unique()
+        if not all_schedules:
+            raise Exception("No team data could be fetched for any season")
 
-            for team in teams:
-                # Calculate points allowed from schedules
-                # When team is home, they allowed away_score
-                home_games = schedules[schedules['home_team'] == team][
-                    ['season', 'week', 'away_team', 'away_score']
-                ].rename(columns={'away_team': 'opponent', 'away_score': 'points_allowed'})
+        # Combine all successfully fetched seasons
+        schedules = pd.concat(all_schedules, ignore_index=True)
+        pbp = pd.concat(all_pbp, ignore_index=True) if all_pbp else pd.DataFrame()
 
-                # When team is away, they allowed home_score
-                away_games = schedules[schedules['away_team'] == team][
-                    ['season', 'week', 'home_team', 'home_score']
-                ].rename(columns={'home_team': 'opponent', 'home_score': 'points_allowed'})
+        all_team_stats = []
 
-                points_allowed = pd.concat([home_games, away_games])
-                points_allowed['team'] = team
+        # Get all unique teams
+        teams = pd.concat([schedules['home_team'], schedules['away_team']]).unique()
 
-                # Calculate yards allowed from PBP (when team is on defense)
+        for team in teams:
+            # Calculate points allowed from schedules
+            # When team is home, they allowed away_score
+            home_games = schedules[schedules['home_team'] == team][
+                ['season', 'week', 'away_team', 'away_score']
+            ].rename(columns={'away_team': 'opponent', 'away_score': 'points_allowed'})
+
+            # When team is away, they allowed home_score
+            away_games = schedules[schedules['away_team'] == team][
+                ['season', 'week', 'home_team', 'home_score']
+            ].rename(columns={'home_team': 'opponent', 'home_score': 'points_allowed'})
+
+            points_allowed = pd.concat([home_games, away_games])
+            points_allowed['team'] = team
+
+            # Calculate yards allowed from PBP (when team is on defense)
+            if not pbp.empty:
                 yards_allowed = pbp[pbp['defteam'] == team].groupby(['season', 'week', 'posteam']).agg({
                     'yards_gained': 'sum',
                     'passing_yards': 'sum',
@@ -118,18 +145,17 @@ class NFLDataService:
                     on=['season', 'week', 'opponent', 'team'],
                     how='outer'
                 )
+            else:
+                # No PBP data available, use points only
+                team_stats = points_allowed
 
-                all_team_stats.append(team_stats)
+            all_team_stats.append(team_stats)
 
-            # Combine all teams
-            combined_stats = pd.concat(all_team_stats, ignore_index=True)
+        # Combine all teams
+        combined_stats = pd.concat(all_team_stats, ignore_index=True)
 
-            print(f"Fetched defensive stats for {len(teams)} teams, {len(combined_stats)} total records")
-            return combined_stats
-
-        except Exception as e:
-            print(f"Error fetching team stats: {e}")
-            raise
+        print(f"✓ Fetched defensive stats for {len(teams)} teams, {len(combined_stats)} total records")
+        return combined_stats
 
     @staticmethod
     def import_players_to_db(weekly_stats_df):
