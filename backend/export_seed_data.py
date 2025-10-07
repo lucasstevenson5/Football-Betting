@@ -63,9 +63,28 @@ def export_data():
 
         print(f"  Exported {len(teams_data)} teams")
 
-        # Skip team stats for now (not critical for main functionality)
+        # Export team stats (needed for defensive adjustments)
+        team_stats = TeamStats.query.all()
         team_stats_data = []
-        print(f"  Skipping team stats export")
+
+        # Create team lookup
+        team_lookup = {t.id: t.team_abbr for t in teams}
+
+        for ts in team_stats:
+            team_abbr = team_lookup.get(ts.team_id)
+            if team_abbr:
+                team_stats_data.append({
+                    'team_abbr': team_abbr,
+                    'season': ts.season,
+                    'week': ts.week,
+                    'opponent': ts.opponent,
+                    'points_against': ts.points_against,
+                    'yards_against': ts.yards_against,
+                    'passing_yards_against': ts.passing_yards_against,
+                    'rushing_yards_against': ts.rushing_yards_against
+                })
+
+        print(f"  Exported {len(team_stats_data)} team stats")
 
         # Combine all data
         seed_data = {

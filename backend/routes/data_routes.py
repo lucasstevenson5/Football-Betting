@@ -181,7 +181,38 @@ def seed_database():
                     db.session.commit()
                     print(f"  Imported batch {i//batch_size + 1}")
 
-                print("✓ Database seeding complete!")
+                # Import team stats
+                team_stats_data = seed_data.get('team_stats', [])
+                if team_stats_data:
+                    print(f"Importing {len(team_stats_data)} team stats...")
+                    batch_size = 500
+
+                    for i in range(0, len(team_stats_data), batch_size):
+                        batch = team_stats_data[i:i + batch_size]
+                        team_stats_objects = []
+
+                        for ts_data in batch:
+                            db_team_id = team_id_map.get(ts_data['team_abbr'])
+                            if not db_team_id:
+                                continue
+
+                            team_stat = TeamStats(
+                                team_id=db_team_id,
+                                season=ts_data['season'],
+                                week=ts_data.get('week'),
+                                opponent=ts_data.get('opponent'),
+                                points_against=ts_data.get('points_against', 0),
+                                yards_against=ts_data.get('yards_against', 0),
+                                passing_yards_against=ts_data.get('passing_yards_against', 0),
+                                rushing_yards_against=ts_data.get('rushing_yards_against', 0)
+                            )
+                            team_stats_objects.append(team_stat)
+
+                        db.session.bulk_save_objects(team_stats_objects)
+                        db.session.commit()
+                    print(f"  Imported {len(team_stats_data)} team stats")
+
+                print("Database seeding complete!")
 
         seed_thread = threading.Thread(target=run_seed, daemon=False)
         seed_thread.start()
