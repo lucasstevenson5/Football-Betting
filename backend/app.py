@@ -8,6 +8,7 @@ from routes.prediction_routes import prediction_bp
 import schedule
 import time
 import threading
+import os
 from services.nfl_data_service import NFLDataService
 
 def create_app():
@@ -16,7 +17,8 @@ def create_app():
     app.config.from_object(Config)
 
     # Enable CORS for React frontend
-    CORS(app)
+    cors_origins = os.getenv('CORS_ORIGINS', 'http://localhost:5173').split(',')
+    CORS(app, resources={r"/api/*": {"origins": cors_origins}})
 
     # Initialize database
     db.init_app(app)
