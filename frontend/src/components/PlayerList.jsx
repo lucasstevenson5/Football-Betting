@@ -36,8 +36,11 @@ const PlayerList = () => {
   useEffect(() => {
     if (selectedSeason) {
       fetchPlayers();
+    } else if (availableSeasons.length === 0) {
+      // No seasons available, stop loading
+      setLoading(false);
     }
-  }, [selectedPosition, limit, sortBy, selectedSeason]);
+  }, [selectedPosition, limit, sortBy, selectedSeason, availableSeasons]);
 
   const fetchAvailableSeasons = async () => {
     try {
