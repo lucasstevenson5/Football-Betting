@@ -46,13 +46,14 @@ const PlayerList = () => {
       setAvailableSeasons(seasons);
       if (seasons.length > 0) {
         setSelectedSeason(seasons[0]); // Default to most recent season
+      } else {
+        // Database is empty
+        setSelectedSeason(null);
       }
     } catch (err) {
       console.error('Error fetching seasons:', err);
-      // Fallback to current year if API fails
-      const currentYear = new Date().getFullYear();
-      setAvailableSeasons([currentYear]);
-      setSelectedSeason(currentYear);
+      setAvailableSeasons([]);
+      setSelectedSeason(null);
     }
   };
 
@@ -198,6 +199,22 @@ const PlayerList = () => {
           <button onClick={fetchPlayers} className="retry-btn">
             Retry
           </button>
+          {availableSeasons.length === 0 && (
+            <div style={{ marginTop: '20px' }}>
+              <p>Or initialize the database with NFL data:</p>
+              <button
+                onClick={handleSyncData}
+                disabled={syncing}
+                className="retry-btn"
+                style={{ marginTop: '10px' }}
+              >
+                {syncing ? 'Syncing Data...' : 'Sync NFL Data'}
+              </button>
+              <p style={{ fontSize: '0.9em', color: '#666', marginTop: '10px' }}>
+                This will fetch data for the last 5 seasons and may take 5-10 minutes.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
