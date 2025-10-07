@@ -54,10 +54,10 @@ class NFLDataService:
                 weekly_stats = weekly_stats[weekly_stats['position'].isin(relevant_positions)]
 
                 all_stats.append(weekly_stats)
-                print(f"✓ Fetched {len(weekly_stats)} records for {season}")
+                print(f"Fetched {len(weekly_stats)} records for {season}")
 
             except Exception as e:
-                print(f"⚠ Skipping season {season}: {e}")
+                print(f"Skipping season {season}: {e}")
                 # Continue with next season instead of failing completely
                 continue
 
@@ -66,7 +66,7 @@ class NFLDataService:
 
         # Combine all successfully fetched seasons
         combined_stats = pd.concat(all_stats, ignore_index=True)
-        print(f"✓ Total: Fetched {len(combined_stats)} player stat records across {len(all_stats)} seasons")
+        print(f"Total: Fetched {len(combined_stats)} player stat records across {len(all_stats)} seasons")
         return combined_stats
 
     @staticmethod
@@ -93,10 +93,10 @@ class NFLDataService:
 
                 all_schedules.append(schedules)
                 all_pbp.append(pbp)
-                print(f"✓ Fetched team stats for {season}")
+                print(f"Fetched team stats for {season}")
 
             except Exception as e:
-                print(f"⚠ Skipping season {season} team stats: {e}")
+                print(f"Skipping season {season} team stats: {e}")
                 continue
 
         if not all_schedules:
@@ -154,7 +154,7 @@ class NFLDataService:
         # Combine all teams
         combined_stats = pd.concat(all_team_stats, ignore_index=True)
 
-        print(f"✓ Fetched defensive stats for {len(teams)} teams, {len(combined_stats)} total records")
+        print(f"Fetched defensive stats for {len(teams)} teams, {len(combined_stats)} total records")
         return combined_stats
 
     @staticmethod
@@ -263,7 +263,7 @@ class NFLDataService:
                 db.session.bulk_save_objects(new_stats)
                 db.session.commit()
 
-            print(f"✓ Imported {imported_count} new stat records")
+            print(f"Imported {imported_count} new stat records")
 
         except Exception as e:
             db.session.rollback()
