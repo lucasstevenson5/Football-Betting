@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify
 from services.nfl_data_service import NFLDataService
+from services.espn_2025_scraper import ESPN2025Scraper
 
 data_bp = Blueprint('data', __name__, url_prefix='/api/data')
 
@@ -18,7 +19,15 @@ def sync_data():
             from app import app
             with app.app_context():
                 print("Manual data sync triggered")
+                # Sync historical data (2021-2024 from nfl-data-py)
                 NFLDataService.sync_all_data(years=5)
+                # Sync 2025 season from ESPN
+                print("Syncing 2025 season from ESPN...")
+                try:
+                    ESPN2025Scraper.import_2025_data(start_week=1, end_week=18)
+                    print("✓ 2025 season data synced")
+                except Exception as e:
+                    print(f"⚠ Error syncing 2025 data: {e}")
                 print("Data sync completed!")
 
         # Run sync in background thread to avoid timeout
@@ -27,7 +36,38 @@ def sync_data():
 
         return jsonify({
             'success': True,
-            'message': 'Data synchronization started in background. This will take 5-10 minutes. Check /api/data/status to monitor progress.'
+            'message': 'Data synchronization started in background. This will take 10-15 minutes. Check /api/data/status to monitor progress.'
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@data_bp.route('/sync/2025', methods=['POST', 'GET'])
+def sync_2025_data():
+    """
+    Sync only 2025 season data from ESPN
+    Useful for updating current season without re-syncing historical data
+    """
+    try:
+        import threading
+
+        def run_2025_sync():
+            from app import app
+            with app.app_context():
+                print("2025 season sync triggered")
+                ESPN2025Scraper.import_2025_data(start_week=1, end_week=18)
+                print("2025 season sync completed!")
+
+        sync_thread = threading.Thread(target=run_2025_sync, daemon=False)
+        sync_thread.start()
+
+        return jsonify({
+            'success': True,
+            'message': '2025 season synchronization started. This will take 5-10 minutes.'
         }), 200
 
     except Exception as e:
