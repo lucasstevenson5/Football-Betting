@@ -172,26 +172,23 @@ class NFLDataService:
             imported_count = 0
             updated_count = 0
 
-            for _, row in unique_players.iterrows():
-                # Check if player already exists
-                player = Player.query.filter_by(player_id=row['player_id']).first()
+            # Get existing player IDs for efficient lookup
+            existing_player_ids = {p.player_id for p in Player.query.with_entities(Player.player_id).all()}
 
-                if player:
-                    # Update existing player
-                    player.name = row['player_name']
-                    player.position = row['position']
-                    player.team = row['recent_team'] if pd.notna(row['recent_team']) else 'FA'
-                    updated_count += 1
-                else:
-                    # Create new player
-                    player = Player(
+            new_players = []
+            for _, row in unique_players.iterrows():
+                if row['player_id'] not in existing_player_ids:
+                    new_players.append(Player(
                         player_id=row['player_id'],
                         name=row['player_name'],
                         position=row['position'],
                         team=row['recent_team'] if pd.notna(row['recent_team']) else 'FA'
-                    )
-                    db.session.add(player)
+                    ))
                     imported_count += 1
+
+            # Bulk insert new players
+            if new_players:
+                db.session.bulk_save_objects(new_players)
 
             db.session.commit()
             print(f"Imported {imported_count} new players, updated {updated_count} existing players")
@@ -210,70 +207,63 @@ class NFLDataService:
             weekly_stats_df: DataFrame containing weekly player stats
         """
         try:
+            # Create player_id to database id mapping
+            player_id_map = {p.player_id: p.id for p in Player.query.with_entities(Player.player_id, Player.id).all()}
+
+            # Get existing stats for quick lookup
+            existing_stats_keys = {
+                (s.player_id, s.season, s.week)
+                for s in PlayerStats.query.with_entities(PlayerStats.player_id, PlayerStats.season, PlayerStats.week).all()
+            }
+
+            new_stats = []
             imported_count = 0
-            updated_count = 0
 
-            for _, row in weekly_stats_df.iterrows():
-                # Find the player in our database
-                player = Player.query.filter_by(player_id=row['player_id']).first()
+            print(f"Processing {len(weekly_stats_df)} stat records...")
+            for idx, row in weekly_stats_df.iterrows():
+                # Map to database player id
+                db_player_id = player_id_map.get(row['player_id'])
 
-                if not player:
-                    print(f"Warning: Player {row['player_name']} not found in database, skipping stats")
+                if not db_player_id:
                     continue
 
-                # Check if stats already exist for this player/season/week
-                existing_stat = PlayerStats.query.filter_by(
-                    player_id=player.id,
+                # Skip if already exists
+                if (db_player_id, row['season'], row['week']) in existing_stats_keys:
+                    continue
+
+                new_stats.append(PlayerStats(
+                    player_id=db_player_id,
                     season=row['season'],
-                    week=row['week']
-                ).first()
+                    week=row['week'],
+                    receptions=row.get('receptions', 0) or 0,
+                    receiving_yards=row.get('receiving_yards', 0) or 0,
+                    receiving_touchdowns=row.get('receiving_tds', 0) or 0,
+                    targets=row.get('targets', 0) or 0,
+                    rushes=row.get('carries', 0) or 0,
+                    rushing_yards=row.get('rushing_yards', 0) or 0,
+                    rushing_touchdowns=row.get('rushing_tds', 0) or 0,
+                    passing_attempts=row.get('attempts', 0) or 0,
+                    passing_completions=row.get('completions', 0) or 0,
+                    passing_yards=row.get('passing_yards', 0) or 0,
+                    passing_touchdowns=row.get('passing_tds', 0) or 0,
+                    interceptions=row.get('interceptions', 0) or 0,
+                    opponent=row.get('opponent_team', None)
+                ))
+                imported_count += 1
 
-                if existing_stat:
-                    # Update existing stats
-                    existing_stat.receptions = row.get('receptions', 0) or 0
-                    existing_stat.receiving_yards = row.get('receiving_yards', 0) or 0
-                    existing_stat.receiving_touchdowns = row.get('receiving_tds', 0) or 0
-                    existing_stat.targets = row.get('targets', 0) or 0
-                    existing_stat.rushes = row.get('carries', 0) or 0
-                    existing_stat.rushing_yards = row.get('rushing_yards', 0) or 0
-                    existing_stat.rushing_touchdowns = row.get('rushing_tds', 0) or 0
-                    existing_stat.passing_attempts = row.get('attempts', 0) or 0
-                    existing_stat.passing_completions = row.get('completions', 0) or 0
-                    existing_stat.passing_yards = row.get('passing_yards', 0) or 0
-                    existing_stat.passing_touchdowns = row.get('passing_tds', 0) or 0
-                    existing_stat.interceptions = row.get('interceptions', 0) or 0
-                    existing_stat.opponent = row.get('opponent_team', None)
-                    updated_count += 1
-                else:
-                    # Create new stat record
-                    stat = PlayerStats(
-                        player_id=player.id,
-                        season=row['season'],
-                        week=row['week'],
-                        receptions=row.get('receptions', 0) or 0,
-                        receiving_yards=row.get('receiving_yards', 0) or 0,
-                        receiving_touchdowns=row.get('receiving_tds', 0) or 0,
-                        targets=row.get('targets', 0) or 0,
-                        rushes=row.get('carries', 0) or 0,
-                        rushing_yards=row.get('rushing_yards', 0) or 0,
-                        rushing_touchdowns=row.get('rushing_tds', 0) or 0,
-                        passing_attempts=row.get('attempts', 0) or 0,
-                        passing_completions=row.get('completions', 0) or 0,
-                        passing_yards=row.get('passing_yards', 0) or 0,
-                        passing_touchdowns=row.get('passing_tds', 0) or 0,
-                        interceptions=row.get('interceptions', 0) or 0,
-                        opponent=row.get('opponent_team', None)
-                    )
-                    db.session.add(stat)
-                    imported_count += 1
-
-                # Commit in batches to improve performance
-                if (imported_count + updated_count) % 100 == 0:
+                # Bulk insert in batches of 1000
+                if len(new_stats) >= 1000:
+                    db.session.bulk_save_objects(new_stats)
                     db.session.commit()
+                    print(f"  Imported {len(new_stats)} records...")
+                    new_stats = []
 
-            # Final commit
-            db.session.commit()
-            print(f"Imported {imported_count} new stat records, updated {updated_count} existing records")
+            # Insert remaining stats
+            if new_stats:
+                db.session.bulk_save_objects(new_stats)
+                db.session.commit()
+
+            print(f"✓ Imported {imported_count} new stat records")
 
         except Exception as e:
             db.session.rollback()

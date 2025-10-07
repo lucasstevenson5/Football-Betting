@@ -3,20 +3,31 @@ from services.nfl_data_service import NFLDataService
 
 data_bp = Blueprint('data', __name__, url_prefix='/api/data')
 
-@data_bp.route('/sync', methods=['POST'])
+@data_bp.route('/sync', methods=['POST', 'GET'])
 def sync_data():
     """
     Manually trigger data synchronization
     This will fetch the latest NFL data and update the database
+    Note: This is a long-running operation (5-10 minutes)
     """
     try:
-        print("Manual data sync triggered")
-        # Fetch 5 years - will skip any unavailable seasons gracefully
-        NFLDataService.sync_all_data(years=5)
+        # Allow GET for easier testing in browser
+        import threading
+
+        def run_sync():
+            from app import app
+            with app.app_context():
+                print("Manual data sync triggered")
+                NFLDataService.sync_all_data(years=5)
+                print("Data sync completed!")
+
+        # Run sync in background thread to avoid timeout
+        sync_thread = threading.Thread(target=run_sync, daemon=False)
+        sync_thread.start()
 
         return jsonify({
             'success': True,
-            'message': 'Data synchronization completed successfully'
+            'message': 'Data synchronization started in background. This will take 5-10 minutes. Check /api/data/status to monitor progress.'
         }), 200
 
     except Exception as e:
