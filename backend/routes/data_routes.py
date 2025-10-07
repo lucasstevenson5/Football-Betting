@@ -11,7 +11,8 @@ def sync_data():
     """
     try:
         print("Manual data sync triggered")
-        NFLDataService.sync_all_data(years=5)
+        # Fetch only 3 years to avoid 2025 season which doesn't exist yet
+        NFLDataService.sync_all_data(years=3)
 
         return jsonify({
             'success': True,
