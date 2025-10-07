@@ -14,6 +14,7 @@ const PlayerList = () => {
   const [limit, setLimit] = useState(20);
   const [sortBy, setSortBy] = useState('receiving_yards');
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
+  const [syncing, setSyncing] = useState(false);
 
   // Fetch available seasons on mount
   useEffect(() => {
@@ -81,6 +82,23 @@ const PlayerList = () => {
       console.error('Error fetching players:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncData = async () => {
+    setSyncing(true);
+    try {
+      await apiService.syncData();
+      alert('Data sync started! This may take a few minutes. Please refresh the page after waiting.');
+      // Refresh seasons after sync
+      setTimeout(() => {
+        fetchAvailableSeasons();
+      }, 5000);
+    } catch (err) {
+      alert('Failed to sync data: ' + (err.response?.data?.error || err.message));
+      console.error('Error syncing data:', err);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -186,6 +204,22 @@ const PlayerList = () => {
       {!loading && !error && players.length === 0 && (
         <div className="no-data">
           <p>No players found for the selected filters.</p>
+          {availableSeasons.length === 0 && (
+            <div style={{ marginTop: '20px' }}>
+              <p>Database appears to be empty. Click below to sync NFL data:</p>
+              <button
+                onClick={handleSyncData}
+                disabled={syncing}
+                className="retry-btn"
+                style={{ marginTop: '10px' }}
+              >
+                {syncing ? 'Syncing Data...' : 'Sync NFL Data'}
+              </button>
+              <p style={{ fontSize: '0.9em', color: '#666', marginTop: '10px' }}>
+                This will fetch data for the last 5 seasons and may take a few minutes.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
