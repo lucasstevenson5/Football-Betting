@@ -10,11 +10,21 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     DEBUG = os.getenv('FLASK_DEBUG', 'False') == 'True'
 
-    # Database - Using SQLite (file-based, no server needed)
-    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-    DB_PATH = os.path.join(BASE_DIR, 'football_betting.db')
+    # Database - Support both PostgreSQL and SQLite
+    DATABASE_URL = os.getenv('DATABASE_URL')
 
-    SQLALCHEMY_DATABASE_URI = f'sqlite:///{DB_PATH}'
+    if DATABASE_URL:
+        # Use PostgreSQL in production (Render provides DATABASE_URL)
+        # Fix postgres:// to postgresql:// for SQLAlchemy compatibility
+        if DATABASE_URL.startswith('postgres://'):
+            DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+        SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    else:
+        # Use SQLite for local development
+        BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+        DB_PATH = os.path.join(BASE_DIR, 'football_betting.db')
+        SQLALCHEMY_DATABASE_URI = f'sqlite:///{DB_PATH}'
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # API
