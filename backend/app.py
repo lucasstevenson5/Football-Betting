@@ -68,13 +68,21 @@ def run_scheduled_update(app):
         time.sleep(60)  # Check every minute
 
 
-if __name__ == '__main__':
-    app = create_app()
+# Create the app instance for gunicorn
+app = create_app()
 
-    # Start the scheduler in a separate thread
+# Start the scheduler in a separate thread when not in development mode
+if not Config.DEBUG:
     scheduler_thread = threading.Thread(target=run_scheduled_update, args=(app,), daemon=True)
     scheduler_thread.start()
     print("Data update scheduler started")
+
+if __name__ == '__main__':
+    # Start the scheduler in development mode
+    if Config.DEBUG:
+        scheduler_thread = threading.Thread(target=run_scheduled_update, args=(app,), daemon=True)
+        scheduler_thread.start()
+        print("Data update scheduler started")
 
     # Run the Flask app
     print(f"Starting Flask server on port {Config.PORT}")
