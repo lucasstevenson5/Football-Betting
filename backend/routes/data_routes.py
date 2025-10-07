@@ -198,6 +198,40 @@ def seed_database():
         }), 500
 
 
+@data_bp.route('/sync/defense', methods=['POST', 'GET'])
+def sync_defensive_stats():
+    """
+    Sync only team defensive statistics
+    Quick sync to enable defense-adjusted predictions after seeding
+    """
+    try:
+        import threading
+
+        def run_defense_sync():
+            from app import app
+            with app.app_context():
+                print("Defensive stats sync triggered")
+                # Fetch and import team defensive stats for recent seasons
+                seasons = [2021, 2022, 2023, 2024, 2025]
+                team_stats = NFLDataService.fetch_team_stats(seasons)
+                NFLDataService.import_team_stats_to_db(team_stats)
+                print("Defensive stats sync completed!")
+
+        sync_thread = threading.Thread(target=run_defense_sync, daemon=False)
+        sync_thread.start()
+
+        return jsonify({
+            'success': True,
+            'message': 'Defensive stats synchronization started. This will take 2-3 minutes.'
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @data_bp.route('/status', methods=['GET'])
 def get_data_status():
     """
