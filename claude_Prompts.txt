@@ -1,0 +1,114 @@
+<task>
+    <role>For this app, you will take on the role of a world class programmer and statistician and will aim to create an app that ingests NFL offensive player stats such as
+		receptions, rushing yards, receiving yards, and touchdowns along with team stats, such as points scored against and yards against. You will then use that 
+		to build a statistical model to help predict probability of future player stats. This model will then be utilized to compare probability of lines to Vegas
+		lines to find the best value bets for each week.</role>
+
+    <skills>Key skills: Python, Statistical Model Development, NFL player and team stats</skills>
+
+    <responsibilities>
+        Responsibilities:
+        - Develop a backend framework that allows player statistics (receptions, rushes, rushing yards, receiving yards, rushing touchdowns, receiving touchdowns) to be pulled
+	  and stored for the model to use.
+		- Utilize statistics from past 5 years including the current year.
+        - Develop a front end framework that displays player information for the user to be able to see each players statistics for the current year.
+    </responsibilities>
+
+    <instructions>
+        Ask questions after reviewing. Focus on responsibilities.
+    </instructions>
+
+    <deliverable>Main task: Create a front end framework based on prompt in responibilities that displays the backend framework goal in responsibilities.</deliverable>
+</task>
+
+
+
+1. Use an API like ESPN to pull NFL stats.
+2. PostgreSQL would be preferred so I can potentially see how you built it and learn from your ways.
+3. Machine Learning would be great, I dont have much experience with that but would love to learn from how you work.
+4. For now, we can have Vegas lines just come from me and can ignore that feature temporarily. Id rather get basic functionality setup first and I can provide Vegas lines 
+   to compare to our probability model.
+5. React would be great!
+6. Front end should just show current year stats.
+7. If updating stats automatically is free, lets do that! Would make life alot easier.
+
+1. I want the tab to be a separate tab under the "Position" area on the main page next to "All", "WR", "RB", and "TE"
+2. Use QB specific benchmarks.
+3. Do multiple TD benchmarks.
+4. Just use data we currently have.
+5. Interception probabilities would be a great add.
+6. Show passing predictions unless they have rushing stats then you can add those. Do not add receiving.
+
+<task>
+    <role>To continue building on this app, i would like there to be an option to parlay player stats and touchdowns together and spit out a probability that those
+		combination of events will happen. Additionally, i would like to clean up some of the player names since we have a mixture of single letters for first 
+		names then full names. Also, I would like each player to only show name, position, and team. Lastly, i would like to start styling with tailwind CSS.</role>
+
+    <skills>Key skills: Python, Statistical Model Development, NFL player and team stats</skills>
+
+    <responsibilities>
+        Responsibilities:
+        - Clean up each players first name by listing full first and last name instead of just a single letter for first name.
+	- Clean up the boxes instead of showing all their stats intially, just show their name, position, and team until user hovers over for 2 seconds.
+	- Begin using tailwind CSS to style front end.
+        - Build new feature to parlay different player stats and touchdown probabilities together and spit out probability that each of those happens.
+    </responsibilities>
+
+    <instructions>
+        Ask questions after reviewing. Focus on responsibilities.
+    </instructions>
+
+    <deliverable>Main task: Update app based on prompt in responibilities.</deliverable>
+</task>
+
+1. Users should be able to parlay both predictions from multiple different players AND multiple stats from the same player. Make the limit
+	10 selections for a parlay and add optionality to save that parlay, edit, delete, and create multiple. Additionally this feature should
+	be a separate page you can navigate to from the main page utilizing tab structure. From there you can type their name and pick a stat
+	to add to the parlay.
+2. You should fetch full names from an API if available and make sure to be able to match between abbreviated names and full names. My preference
+	would be to do First Name and Last Name like "Josh Allen".
+3. Yes, i would like only Name, Position, and Team to show initially until the 2 second hover than can show full stats. This can be applied to 
+	every position available. Clicking on a player should stil open detailed modal with predictions.
+4. I would like you to replace all current CSS with Tailwind. Design preference would be to not use purple as background, make it more modern.
+	Additionally, I would like to experiment with the card layouts being the colors of that player's current team for each background of the
+	cards. You can start with cards on the main page first and the main page background and then move on if i like it.
+5. Multiplying probabilities is what i was thinking too. I would like you to display all 3, combined probability, each individual probability
+	next to the corresponding stat, and the potential payout expectation.
+
+1. Yes this can be a dedicated page with its own route where you can see all the parlays you have built for the upcoming week. Additionally,
+	tabs should be "Player Stats" tab and a "Parlay Builder" tab on the main header. Yes, users should be able to see all their saved
+	parlays on one page.
+2. Player search for adding selection to parlays should be able to be filtered by position and be able to search player name. Every stat 
+	selection should be available that you mentioned. Yes users can set thresholds for each breakpoint that is shown in the stats for our prediction tab.
+3. We should use existing prediction probabilities from the player modal. Just use predictions we already have.
+	Simple multiplication is great for combined probability.
+4. No just have bet amount default to $10 to show potential payout and let users modify it if they would like.
+	American odds format would be great. Expected value calculation you listed is great.
+5. Lets just save parlays to local storage for now, but lets do a stretch goal for future of creating username and 
+	and auth and assigning parlays to that players profile in our database but again thats later on, not now.
+	Yes allow users to remove, add, edit thresholds. Users cant compare parlays side by side. Focus on building one
+	then can save and look at it but also can create more.
+6. Yes show all of those for each parlay leg. Yes at the bottom combined probability in percent, American odds, and potential payout.
+
+1. Yes this should be a season average to give more data points and barring injuries offenses shouldnt change much throughout 
+	the year, just do better/worse against different levels of defense. This should be at team level.
+2. Yes target share and yard share look correct. Use target share for reception prediction and yard share for yardage
+	projections. This should be time weighted to account for how offenses morph and other people may get more target share
+	in the future.
+3. We should scale up how much we think the offense will score against the defense since a pass heavy offense will likely
+	pass more often even against a good pass defense so likely will get more passing yards.
+4. We dont need to worry about rushing impact on defense, i more want to also do this weighted system mentioned for Puka but
+	for running backs. If they are facing a good run defense but they are a run heavy offense, then they should get more
+	rushing yards than the average defense would against that defense.
+5. Check what's available in our database, i believe we have passing and rushing yards allowed per defense already.
+6. We should use passing yards for QB and receiving yards predictions and rushing yards for rushing yards prediction.
+
+First, let me clarify that i dont want this pushed to deployed website yet, i want this branch to be local dev to ensure
+	its working before we push it to the deployed website.
+1. For now lets try them in the performance predictions tab when you select a player and set a threshold next to each
+	of their odds of hitting certain stats.
+2. Yeah those looks great for receiving yards, rushing yards, receptions and passing yards.
+3. QBs can show passing and rushing hit rates if they rush for more than 15 yards/game on average. RBs can show both
+	rushing and receiving hit rates. WR/TEs can show receiving hit rates only.
+4. You can just show 100% hit rate and not the games count. Color Coded works but lets make yellow 25%-75%.
+5. This should only be based on 2025 games.
