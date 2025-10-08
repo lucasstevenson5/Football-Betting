@@ -184,7 +184,7 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
                             }}
                           />
                           <span className="probability-value">{prob}%</span>
-                          {hitRate !== null && (
+                          {hitRate !== null && hitRate !== undefined && typeof hitRate === 'number' && (
                             <span
                               className="hit-rate-badge"
                               style={{ color: getHitRateColor(hitRate) }}
@@ -240,7 +240,7 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
                             }}
                           />
                           <span className="probability-value">{prob}%</span>
-                          {hitRate !== null && (
+                          {hitRate !== null && hitRate !== undefined && typeof hitRate === 'number' && (
                             <span
                               className="hit-rate-badge"
                               style={{ color: getHitRateColor(hitRate) }}
@@ -297,7 +297,7 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
                             }}
                           />
                           <span className="probability-value">{prob}%</span>
-                          {hitRate !== null && (
+                          {hitRate !== null && hitRate !== undefined && typeof hitRate === 'number' && (
                             <span
                               className="hit-rate-badge"
                               style={{ color: getHitRateColor(hitRate) }}
