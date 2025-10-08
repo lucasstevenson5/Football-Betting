@@ -21,7 +21,7 @@ class PredictionService:
     """Service for predicting player performance probabilities"""
 
     # Yardage benchmarks to predict (for WR/RB/TE receiving/rushing)
-    YARDAGE_BENCHMARKS = [15, 25, 40, 50, 65, 75, 100, 125, 150, 175, 200, 225, 250]
+    YARDAGE_BENCHMARKS = [15, 25, 40, 50, 60, 70, 80, 90, 100, 110, 120]
 
     # QB-specific passing yards benchmarks
     QB_PASSING_BENCHMARKS = [150, 200, 225, 250, 275, 300, 325, 350, 375, 400, 450, 500]

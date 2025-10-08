@@ -7,8 +7,8 @@ class HitRateService:
 
     # Threshold configurations by stat type
     THRESHOLDS = {
-        'receiving_yards': [40, 60, 80, 100],
-        'rushing_yards': [40, 60, 80, 100],
+        'receiving_yards': [15, 25, 40, 50, 60, 70, 80, 90, 100, 110, 120],
+        'rushing_yards': [15, 25, 40, 50, 60, 70, 80, 90, 100, 110, 120],
         'passing_yards': [200, 250, 300],
         'receptions': [3, 5, 7],
         'touchdowns': [1, 2]
