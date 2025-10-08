@@ -13,6 +13,7 @@ POSITION_OVERRIDES = {
     # Player ID: Correct Position
     '00-0033292': 'QB',  # Tyrod Taylor (NFL Data has him as WR due to limited data)
     '00-0028118': 'QB',  # T.Taylor duplicate (if different from Tyrod)
+    '00-0037112': 'TE',  # Jake Tonges (2025 rookie TE, incorrectly listed as WR)
 }
 
 
