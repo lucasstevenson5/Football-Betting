@@ -24,7 +24,7 @@ class PredictionService:
     YARDAGE_BENCHMARKS = [15, 25, 40, 50, 60, 70, 80, 90, 100, 110, 120]
 
     # QB-specific passing yards benchmarks
-    QB_PASSING_BENCHMARKS = [150, 200, 225, 250, 275, 300, 325, 350, 375, 400, 450, 500]
+    QB_PASSING_BENCHMARKS = [200, 225, 250, 275, 300, 325, 350, 375, 400]
 
     # Time decay factors (more recent = higher weight)
     CURRENT_SEASON_WEIGHT = 2.0  # Current season weighted 2x higher

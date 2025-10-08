@@ -9,7 +9,7 @@ class HitRateService:
     THRESHOLDS = {
         'receiving_yards': [15, 25, 40, 50, 60, 70, 80, 90, 100, 110, 120],
         'rushing_yards': [15, 25, 40, 50, 60, 70, 80, 90, 100, 110, 120],
-        'passing_yards': [200, 250, 300],
+        'passing_yards': [200, 225, 250, 275, 300, 325, 350, 375, 400],
         'receptions': [3, 5, 7],
         'touchdowns': [1, 2]
     }

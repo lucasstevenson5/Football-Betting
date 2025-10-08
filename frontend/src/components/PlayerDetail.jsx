@@ -149,31 +149,63 @@ const PlayerDetail = ({ playerId, onClose }) => {
 
           <h4>Career Averages (Per Game)</h4>
           <div className="stats-grid">
-            <div className="stat-box">
-              <div className="stat-label">Rushing Yards</div>
-              <div className="stat-value">{career_stats.averages.rushing_yards_per_game}</div>
-              <div className="stat-std">σ: {career_stats.standard_deviations.rushing_yards}</div>
-            </div>
-            <div className="stat-box">
-              <div className="stat-label">Receiving Yards</div>
-              <div className="stat-value">{career_stats.averages.receiving_yards_per_game}</div>
-              <div className="stat-std">σ: {career_stats.standard_deviations.receiving_yards}</div>
-            </div>
-            <div className="stat-box">
-              <div className="stat-label">Rushing TDs</div>
-              <div className="stat-value">{career_stats.averages.rushing_touchdowns_per_game}</div>
-              <div className="stat-std">σ: {career_stats.standard_deviations.rushing_touchdowns}</div>
-            </div>
-            <div className="stat-box">
-              <div className="stat-label">Receiving TDs</div>
-              <div className="stat-value">{career_stats.averages.receiving_touchdowns_per_game}</div>
-              <div className="stat-std">σ: {career_stats.standard_deviations.receiving_touchdowns}</div>
-            </div>
-            <div className="stat-box">
-              <div className="stat-label">Total TDs</div>
-              <div className="stat-value">{career_stats.averages.total_touchdowns_per_game}</div>
-              <div className="stat-std">σ: {career_stats.standard_deviations.total_touchdowns}</div>
-            </div>
+            {player.position === 'QB' ? (
+              <>
+                <div className="stat-box">
+                  <div className="stat-label">Passing Yards</div>
+                  <div className="stat-value">{career_stats.averages.passing_yards_per_game}</div>
+                  <div className="stat-std">σ: {career_stats.standard_deviations.passing_yards}</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-label">Passing TDs</div>
+                  <div className="stat-value">{career_stats.averages.passing_touchdowns_per_game}</div>
+                  <div className="stat-std">σ: {career_stats.standard_deviations.passing_touchdowns}</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-label">Interceptions</div>
+                  <div className="stat-value">{career_stats.averages.interceptions_per_game}</div>
+                  <div className="stat-std">σ: {career_stats.standard_deviations.interceptions}</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-label">Completions</div>
+                  <div className="stat-value">{career_stats.averages.passing_completions_per_game}</div>
+                  <div className="stat-std">σ: {career_stats.standard_deviations.passing_completions}</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-label">Attempts</div>
+                  <div className="stat-value">{career_stats.averages.passing_attempts_per_game}</div>
+                  <div className="stat-std">σ: {career_stats.standard_deviations.passing_attempts}</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="stat-box">
+                  <div className="stat-label">Rushing Yards</div>
+                  <div className="stat-value">{career_stats.averages.rushing_yards_per_game}</div>
+                  <div className="stat-std">σ: {career_stats.standard_deviations.rushing_yards}</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-label">Receiving Yards</div>
+                  <div className="stat-value">{career_stats.averages.receiving_yards_per_game}</div>
+                  <div className="stat-std">σ: {career_stats.standard_deviations.receiving_yards}</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-label">Rushing TDs</div>
+                  <div className="stat-value">{career_stats.averages.rushing_touchdowns_per_game}</div>
+                  <div className="stat-std">σ: {career_stats.standard_deviations.rushing_touchdowns}</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-label">Receiving TDs</div>
+                  <div className="stat-value">{career_stats.averages.receiving_touchdowns_per_game}</div>
+                  <div className="stat-std">σ: {career_stats.standard_deviations.receiving_touchdowns}</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-label">Total TDs</div>
+                  <div className="stat-value">{career_stats.averages.total_touchdowns_per_game}</div>
+                  <div className="stat-std">σ: {career_stats.standard_deviations.total_touchdowns}</div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -187,53 +219,103 @@ const PlayerDetail = ({ playerId, onClose }) => {
               </div>
 
               <div className="season-stats">
-                <div className="stat-section">
-                  <h5>Season Totals</h5>
-                  <div className="stats-grid">
-                    <div className="stat-item">
-                      <span className="label">Rushing Yards:</span>
-                      <span className="value">{season.totals.rushing_yards}</span>
+                {player.position === 'QB' ? (
+                  <>
+                    <div className="stat-section">
+                      <h5>Season Totals</h5>
+                      <div className="stats-grid">
+                        <div className="stat-item">
+                          <span className="label">Passing Yards:</span>
+                          <span className="value">{season.totals.passing_yards}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="label">Passing TDs:</span>
+                          <span className="value">{season.totals.passing_touchdowns}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="label">Interceptions:</span>
+                          <span className="value">{season.totals.interceptions}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="label">Completions:</span>
+                          <span className="value">{season.totals.passing_completions}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="label">Attempts:</span>
+                          <span className="value">{season.totals.passing_attempts}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="stat-item">
-                      <span className="label">Receiving Yards:</span>
-                      <span className="value">{season.totals.receiving_yards}</span>
-                    </div>
-                    <div className="stat-item">
-                      <span className="label">Rushing TDs:</span>
-                      <span className="value">{season.totals.rushing_touchdowns}</span>
-                    </div>
-                    <div className="stat-item">
-                      <span className="label">Receiving TDs:</span>
-                      <span className="value">{season.totals.receiving_touchdowns}</span>
-                    </div>
-                    <div className="stat-item">
-                      <span className="label">Receptions:</span>
-                      <span className="value">{season.totals.receptions}</span>
-                    </div>
-                    <div className="stat-item">
-                      <span className="label">Targets:</span>
-                      <span className="value">{season.totals.targets}</span>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="stat-section">
-                  <h5>Per Game Averages</h5>
-                  <div className="stats-grid">
-                    <div className="stat-item">
-                      <span className="label">Rushing Yards/Game:</span>
-                      <span className="value">{season.averages.rushing_yards_per_game}</span>
+                    <div className="stat-section">
+                      <h5>Per Game Averages</h5>
+                      <div className="stats-grid">
+                        <div className="stat-item">
+                          <span className="label">Passing Yards/Game:</span>
+                          <span className="value">{season.averages.passing_yards_per_game}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="label">Passing TDs/Game:</span>
+                          <span className="value">{season.averages.passing_touchdowns_per_game}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="label">INTs/Game:</span>
+                          <span className="value">{season.averages.interceptions_per_game}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="stat-item">
-                      <span className="label">Receiving Yards/Game:</span>
-                      <span className="value">{season.averages.receiving_yards_per_game}</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="stat-section">
+                      <h5>Season Totals</h5>
+                      <div className="stats-grid">
+                        <div className="stat-item">
+                          <span className="label">Rushing Yards:</span>
+                          <span className="value">{season.totals.rushing_yards}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="label">Receiving Yards:</span>
+                          <span className="value">{season.totals.receiving_yards}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="label">Rushing TDs:</span>
+                          <span className="value">{season.totals.rushing_touchdowns}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="label">Receiving TDs:</span>
+                          <span className="value">{season.totals.receiving_touchdowns}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="label">Receptions:</span>
+                          <span className="value">{season.totals.receptions}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="label">Targets:</span>
+                          <span className="value">{season.totals.targets}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="stat-item">
-                      <span className="label">TDs/Game:</span>
-                      <span className="value">{season.averages.total_touchdowns_per_game}</span>
+
+                    <div className="stat-section">
+                      <h5>Per Game Averages</h5>
+                      <div className="stats-grid">
+                        <div className="stat-item">
+                          <span className="label">Rushing Yards/Game:</span>
+                          <span className="value">{season.averages.rushing_yards_per_game}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="label">Receiving Yards/Game:</span>
+                          <span className="value">{season.averages.receiving_yards_per_game}</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="label">TDs/Game:</span>
+                          <span className="value">{season.averages.total_touchdowns_per_game}</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
             </div>
           ))}
