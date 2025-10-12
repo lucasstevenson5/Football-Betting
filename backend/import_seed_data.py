@@ -3,10 +3,12 @@ Import database from JSON seed file
 Fast initialization of database from pre-exported data
 """
 import json
+from datetime import datetime
 from app import create_app
 from models import db
-from models.player import Player, PlayerStats
+from models.player import Player, PlayerStats, ESPNProjection
 from models.team import Team, TeamStats
+from models.schedule import Schedule
 
 def import_data(seed_file='seed_data.json'):
     """Import all database data from JSON seed file"""
@@ -27,10 +29,12 @@ def import_data(seed_file='seed_data.json'):
 
         # Clear existing data
         print("\nClearing existing data...")
+        ESPNProjection.query.delete()
         PlayerStats.query.delete()
         Player.query.delete()
         TeamStats.query.delete()
         Team.query.delete()
+        Schedule.query.delete()
         db.session.commit()
         print("  Database cleared")
 
@@ -156,6 +160,65 @@ def import_data(seed_file='seed_data.json'):
         else:
             print("  No team stats in seed file")
 
+        # Import ESPN projections
+        print("\nImporting ESPN projections...")
+        espn_projections_data = seed_data.get('espn_projections', [])
+
+        if espn_projections_data:
+            for i in range(0, len(espn_projections_data), batch_size):
+                batch = espn_projections_data[i:i + batch_size]
+                espn_objects = []
+
+                for proj_data in batch:
+                    db_player_id = player_id_map.get(proj_data['player_id'])
+                    if not db_player_id:
+                        continue
+
+                    projection = ESPNProjection(
+                        player_id=db_player_id,
+                        espn_athlete_id=proj_data.get('espn_athlete_id'),
+                        season=proj_data['season'],
+                        week=proj_data['week'],
+                        passing_yards=proj_data.get('passing_yards'),
+                        passing_touchdowns=proj_data.get('passing_touchdowns'),
+                        interceptions=proj_data.get('interceptions'),
+                        rushing_yards=proj_data.get('rushing_yards'),
+                        rushing_touchdowns=proj_data.get('rushing_touchdowns'),
+                        receptions=proj_data.get('receptions'),
+                        receiving_yards=proj_data.get('receiving_yards'),
+                        receiving_touchdowns=proj_data.get('receiving_touchdowns'),
+                        targets=proj_data.get('targets')
+                    )
+                    espn_objects.append(projection)
+
+                db.session.bulk_save_objects(espn_objects)
+                db.session.commit()
+
+            print(f"  ✓ Imported {len(espn_projections_data)} ESPN projections")
+        else:
+            print("  No ESPN projections in seed file")
+
+        # Import schedules
+        print("\nImporting schedules...")
+        schedules_data = seed_data.get('schedules', [])
+
+        if schedules_data:
+            for sched_data in schedules_data:
+                schedule = Schedule(
+                    game_id=sched_data['game_id'],
+                    season=sched_data['season'],
+                    week=sched_data['week'],
+                    home_team=sched_data['home_team'],
+                    away_team=sched_data['away_team'],
+                    gameday=datetime.fromisoformat(sched_data['gameday']) if sched_data.get('gameday') else None
+                )
+                db.session.add(schedule)
+
+            db.session.commit()
+            print(f"  ✓ Imported {len(schedules_data)} schedule entries")
+        else:
+            print("  No schedules in seed file")
+
         print("\n" + "=" * 60)
         print("DATABASE IMPORT COMPLETE!")
         print("=" * 60)
@@ -166,6 +229,8 @@ def import_data(seed_file='seed_data.json'):
         print(f"  Players: {Player.query.count()}")
         print(f"  Player Stats: {PlayerStats.query.count()}")
         print(f"  Team Stats: {TeamStats.query.count()}")
+        print(f"  ESPN Projections: {ESPNProjection.query.count()}")
+        print(f"  Schedule Entries: {Schedule.query.count()}")
 
         # Show available seasons
         from sqlalchemy import func

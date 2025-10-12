@@ -3,9 +3,11 @@ Export database to JSON seed file
 Run this locally after syncing all data to create a seed file
 """
 import json
+from datetime import datetime
 from app import create_app
-from models.player import Player, PlayerStats
+from models.player import Player, PlayerStats, ESPNProjection
 from models.team import Team, TeamStats
+from models.schedule import Schedule
 
 def export_data():
     """Export all database data to JSON file"""
@@ -86,14 +88,55 @@ def export_data():
 
         print(f"  Exported {len(team_stats_data)} team stats")
 
+        # Export ESPN projections
+        espn_projections = ESPNProjection.query.all()
+        espn_projections_data = []
+
+        for proj in espn_projections:
+            espn_projections_data.append({
+                'player_id': player_id_map.get(proj.player_id),
+                'espn_athlete_id': proj.espn_athlete_id,
+                'season': proj.season,
+                'week': proj.week,
+                'passing_yards': proj.passing_yards,
+                'passing_touchdowns': proj.passing_touchdowns,
+                'interceptions': proj.interceptions,
+                'rushing_yards': proj.rushing_yards,
+                'rushing_touchdowns': proj.rushing_touchdowns,
+                'receptions': proj.receptions,
+                'receiving_yards': proj.receiving_yards,
+                'receiving_touchdowns': proj.receiving_touchdowns,
+                'targets': proj.targets
+            })
+
+        print(f"  Exported {len(espn_projections_data)} ESPN projections")
+
+        # Export schedule
+        schedules = Schedule.query.all()
+        schedules_data = []
+
+        for sched in schedules:
+            schedules_data.append({
+                'game_id': sched.game_id,
+                'season': sched.season,
+                'week': sched.week,
+                'home_team': sched.home_team,
+                'away_team': sched.away_team,
+                'gameday': sched.gameday.isoformat() if sched.gameday else None
+            })
+
+        print(f"  Exported {len(schedules_data)} schedule entries")
+
         # Combine all data
         seed_data = {
-            'version': '1.0',
-            'exported_at': str(app.config.get('UPDATE_STATS_HOUR', '2025-10-07')),
+            'version': '2.0',
+            'exported_at': datetime.utcnow().isoformat(),
             'players': players_data,
             'player_stats': stats_data,
             'teams': teams_data,
-            'team_stats': team_stats_data
+            'team_stats': team_stats_data,
+            'espn_projections': espn_projections_data,
+            'schedules': schedules_data
         }
 
         # Write to file
