@@ -270,13 +270,16 @@ def get_data_status():
     Returns counts of players, stats, etc.
     """
     try:
-        from models.player import Player, PlayerStats
+        from models.player import Player, PlayerStats, ESPNProjection
         from models.team import Team, TeamStats
+        from models.schedule import Schedule
 
         player_count = Player.query.count()
         player_stats_count = PlayerStats.query.count()
         team_count = Team.query.count()
         team_stats_count = TeamStats.query.count()
+        espn_projection_count = ESPNProjection.query.count()
+        schedule_count = Schedule.query.count()
 
         # Get seasons available
         from sqlalchemy import func
@@ -291,6 +294,8 @@ def get_data_status():
                 'player_stats_records': player_stats_count,
                 'teams': team_count,
                 'team_stats_records': team_stats_count,
+                'espn_projections': espn_projection_count,
+                'schedule_entries': schedule_count,
                 'seasons_available': seasons
             }
         }), 200
@@ -308,31 +313,30 @@ def sync_espn_projections():
     """
     try:
         import threading
-        
+
         def run_espn_sync():
             from app import app
             with app.app_context():
                 print("ESPN projections sync started...")
-                import subprocess
-                result = subprocess.run(
-                    ['python', 'fetch_espn_weekly_projections.py'],
-                    cwd=os.path.dirname(__file__) + '/..',
-                    capture_output=True,
-                    text=True
-                )
-                print(result.stdout)
-                if result.stderr:
-                    print(f"Errors: {result.stderr}")
-                print("ESPN projections sync completed!")
-        
+                try:
+                    import sys
+                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+                    from fetch_espn_weekly_projections import import_weekly_projections
+                    import_weekly_projections(week=6, season=2025)
+                    print("ESPN projections sync completed!")
+                except Exception as e:
+                    print(f"Error syncing ESPN projections: {e}")
+                    import traceback
+                    traceback.print_exc()
+
         sync_thread = threading.Thread(target=run_espn_sync, daemon=False)
         sync_thread.start()
-        
+
         return jsonify({
             'success': True,
-            'message': 'ESPN projections sync started. This will take 1-2 minutes.'
+            'message': 'ESPN projections sync started for Week 6. This will take 1-2 minutes.'
         }), 200
-    
+
     except Exception as e:
         return jsonify({
             'success': False,
@@ -346,31 +350,30 @@ def sync_schedule():
     """
     try:
         import threading
-        
+
         def run_schedule_sync():
             from app import app
             with app.app_context():
                 print("Schedule sync started...")
-                import subprocess
-                result = subprocess.run(
-                    ['python', 'import_schedule.py'],
-                    cwd=os.path.dirname(__file__) + '/..',
-                    capture_output=True,
-                    text=True
-                )
-                print(result.stdout)
-                if result.stderr:
-                    print(f"Errors: {result.stderr}")
-                print("Schedule sync completed!")
-        
+                try:
+                    import sys
+                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+                    from import_schedule import import_schedules
+                    import_schedules(seasons=[2025])
+                    print("Schedule sync completed!")
+                except Exception as e:
+                    print(f"Error syncing schedule: {e}")
+                    import traceback
+                    traceback.print_exc()
+
         sync_thread = threading.Thread(target=run_schedule_sync, daemon=False)
         sync_thread.start()
-        
+
         return jsonify({
             'success': True,
-            'message': 'Schedule sync started. This will take less than 1 minute.'
+            'message': 'Schedule sync started for 2025 season. This will take less than 1 minute.'
         }), 200
-    
+
     except Exception as e:
         return jsonify({
             'success': False,
