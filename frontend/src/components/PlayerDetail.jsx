@@ -329,6 +329,8 @@ const PlayerDetail = ({ playerId, onClose }) => {
             playerId={player.id}
             playerName={player.name}
             playerTeam={player.team}
+            week6Opponent={player.week_6_opponent}
+            week6IsHome={player.week_6_is_home}
           />
         )}
       </div>

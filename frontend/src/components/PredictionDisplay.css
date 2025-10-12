@@ -21,6 +21,36 @@
   margin-bottom: 8px;
 }
 
+.week-6-matchup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.matchup-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.matchup-info {
+  font-size: 15px;
+  font-weight: 700;
+  color: white;
+}
+
+.week-6-matchup.bye-week {
+  background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+  box-shadow: 0 2px 4px rgba(100, 116, 139, 0.3);
+}
+
 .opponent-select {
   width: 100%;
   max-width: 300px;

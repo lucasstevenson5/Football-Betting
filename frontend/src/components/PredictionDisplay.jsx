@@ -38,27 +38,12 @@ const NFL_TEAMS = [
   { name: 'Commanders', abbr: 'WAS' }
 ].sort((a, b) => a.name.localeCompare(b.name));
 
-const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
+const PredictionDisplay = ({ playerId, playerName, playerTeam, week6Opponent, week6IsHome }) => {
   const [opponent, setOpponent] = useState('');
   const [prediction, setPrediction] = useState(null);
   const [hitRates, setHitRates] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // Fetch hit rates when component mounts
-  useEffect(() => {
-    const fetchHitRates = async () => {
-      try {
-        const response = await apiService.getHitRates(playerId);
-        setHitRates(response.data.hit_rates);
-      } catch (err) {
-        console.error('Hit rates error:', err);
-        // Don't show error to user, hit rates are optional
-      }
-    };
-
-    fetchHitRates();
-  }, [playerId]);
 
   const fetchPrediction = async (opponentTeam) => {
     if (!opponentTeam) {
@@ -112,6 +97,32 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
     return hitRates.hit_rates[statType][threshold];
   };
 
+  // Fetch hit rates and auto-load Week 6 opponent prediction
+  useEffect(() => {
+    const fetchData = async () => {
+      console.log('PredictionDisplay useEffect - week6Opponent:', week6Opponent);
+
+      // Fetch hit rates
+      try {
+        const response = await apiService.getHitRates(playerId);
+        setHitRates(response.data.hit_rates);
+      } catch (err) {
+        console.error('Hit rates error:', err);
+      }
+
+      // Auto-load prediction for Week 6 opponent (skip if bye week)
+      if (week6Opponent && week6Opponent !== 'BYE') {
+        console.log('Auto-loading prediction for Week 6 opponent:', week6Opponent);
+        setOpponent(week6Opponent);
+        await fetchPrediction(week6Opponent);
+      } else if (week6Opponent === 'BYE') {
+        console.log('Player on bye week - no predictions to load');
+      }
+    };
+
+    fetchData();
+  }, [playerId, week6Opponent]);
+
   // Filter out player's own team
   const availableOpponents = NFL_TEAMS.filter(team => team.abbr !== playerTeam);
 
@@ -120,7 +131,20 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
       <h3>Performance Predictions</h3>
 
       <div className="opponent-selector">
-        <label htmlFor="opponent-select">Select Opponent:</label>
+        {week6Opponent && (
+          <div className={`week-6-matchup ${week6Opponent === 'BYE' ? 'bye-week' : ''}`}>
+            <span className="matchup-label">Week 6 Matchup:</span>
+            <span className="matchup-info">
+              {week6Opponent === 'BYE'
+                ? 'BYE'
+                : `${week6IsHome ? 'vs' : '@'} ${week6Opponent}`
+              }
+            </span>
+          </div>
+        )}
+        <label htmlFor="opponent-select">
+          {week6Opponent && week6Opponent !== 'BYE' ? 'Or choose different opponent:' : 'Select Opponent:'}
+        </label>
         <select
           id="opponent-select"
           value={opponent}
