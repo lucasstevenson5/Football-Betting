@@ -300,3 +300,79 @@ def get_data_status():
             'success': False,
             'error': str(e)
         }), 500
+
+@data_bp.route('/sync/espn-projections', methods=['POST', 'GET'])
+def sync_espn_projections():
+    """
+    Sync ESPN weekly projections for current week
+    """
+    try:
+        import threading
+        
+        def run_espn_sync():
+            from app import app
+            with app.app_context():
+                print("ESPN projections sync started...")
+                import subprocess
+                result = subprocess.run(
+                    ['python', 'fetch_espn_weekly_projections.py'],
+                    cwd=os.path.dirname(__file__) + '/..',
+                    capture_output=True,
+                    text=True
+                )
+                print(result.stdout)
+                if result.stderr:
+                    print(f"Errors: {result.stderr}")
+                print("ESPN projections sync completed!")
+        
+        sync_thread = threading.Thread(target=run_espn_sync, daemon=False)
+        sync_thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': 'ESPN projections sync started. This will take 1-2 minutes.'
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@data_bp.route('/sync/schedule', methods=['POST', 'GET'])
+def sync_schedule():
+    """
+    Sync NFL schedule for 2025 season
+    """
+    try:
+        import threading
+        
+        def run_schedule_sync():
+            from app import app
+            with app.app_context():
+                print("Schedule sync started...")
+                import subprocess
+                result = subprocess.run(
+                    ['python', 'import_schedule.py'],
+                    cwd=os.path.dirname(__file__) + '/..',
+                    capture_output=True,
+                    text=True
+                )
+                print(result.stdout)
+                if result.stderr:
+                    print(f"Errors: {result.stderr}")
+                print("Schedule sync completed!")
+        
+        sync_thread = threading.Thread(target=run_schedule_sync, daemon=False)
+        sync_thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Schedule sync started. This will take less than 1 minute.'
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
