@@ -1,10 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PlayerList from './components/PlayerList';
 import ParlayBuilder from './components/ParlayBuilder';
+import ESPNStats from './components/ESPNStats';
+import ProjectionComparison from './components/ProjectionComparison';
+import TrendingPlayers from './components/TrendingPlayers';
 import './App.css';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('players'); // 'players' or 'parlays'
+  // Load active tab from localStorage or default to 'players'
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('activeTab') || 'players';
+  });
+
+  // Save active tab to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('activeTab', activeTab);
+  }, [activeTab]);
 
   return (
     <div className="App">
@@ -18,6 +29,24 @@ function App() {
             Player Stats
           </button>
           <button
+            className={`app-tab ${activeTab === 'espn' ? 'active' : ''}`}
+            onClick={() => setActiveTab('espn')}
+          >
+            ESPN Stats
+          </button>
+          <button
+            className={`app-tab ${activeTab === 'comparison' ? 'active' : ''}`}
+            onClick={() => setActiveTab('comparison')}
+          >
+            Projection Comparison
+          </button>
+          <button
+            className={`app-tab ${activeTab === 'trending' ? 'active' : ''}`}
+            onClick={() => setActiveTab('trending')}
+          >
+            Trending Players
+          </button>
+          <button
             className={`app-tab ${activeTab === 'parlays' ? 'active' : ''}`}
             onClick={() => setActiveTab('parlays')}
           >
@@ -29,6 +58,9 @@ function App() {
       {/* Content */}
       <div className="app-content">
         {activeTab === 'players' && <PlayerList />}
+        {activeTab === 'espn' && <ESPNStats />}
+        {activeTab === 'comparison' && <ProjectionComparison />}
+        {activeTab === 'trending' && <TrendingPlayers />}
         {activeTab === 'parlays' && <ParlayBuilder />}
       </div>
     </div>

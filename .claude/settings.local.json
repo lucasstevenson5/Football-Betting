@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(npm run dev:*)",
+      "Bash(venvScripts:*)",
+      "Bash(./venv/Scripts/python.exe app.py)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(curl -X POST https://football-betting-85h1.onrender.com/api/data/sync)",
+      "Bash(curl https://football-betting-85h1.onrender.com/api/health)",
+      "Bash(curl https://football-betting-85h1.onrender.com/api/data/status)",
+      "Bash(curl https://football-betting-85h1.onrender.com/api/data/sync)",
+      "Bash(./venv/Scripts/python.exe export_seed_data.py:*)",
+      "Bash(curl https://football-betting-85h1.onrender.com/api/data/sync/defense)",
+      "Bash(./venv/Scripts/python.exe:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout:*)",
+      "Bash(curl:*)",
+      "Bash(timeout 5 bash -c 'until curl -s http://localhost:5000/api/data/status > /dev/null; do sleep 0.5; done')"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

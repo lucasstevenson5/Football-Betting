@@ -5,6 +5,8 @@ from models import db
 from routes.player_routes import player_bp
 from routes.data_routes import data_bp
 from routes.prediction_routes import prediction_bp
+from routes.comparison_routes import comparison_bp
+from routes.trending_routes import trending_bp
 import schedule
 import time
 import threading
@@ -17,7 +19,7 @@ def create_app():
     app.config.from_object(Config)
 
     # Enable CORS for React frontend
-    cors_origins = os.getenv('CORS_ORIGINS', 'http://localhost:5173').split(',')
+    cors_origins = os.getenv('CORS_ORIGINS', 'http://localhost:5173,http://localhost:5174').split(',')
     CORS(app, resources={r"/api/*": {"origins": cors_origins}})
 
     # Initialize database
@@ -27,6 +29,8 @@ def create_app():
     app.register_blueprint(player_bp)
     app.register_blueprint(data_bp)
     app.register_blueprint(prediction_bp)
+    app.register_blueprint(comparison_bp)
+    app.register_blueprint(trending_bp)
 
     # Create tables
     with app.app_context():

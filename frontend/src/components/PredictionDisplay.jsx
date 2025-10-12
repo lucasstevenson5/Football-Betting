@@ -38,9 +38,10 @@ const NFL_TEAMS = [
   { name: 'Commanders', abbr: 'WAS' }
 ].sort((a, b) => a.name.localeCompare(b.name));
 
-const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
+const PredictionDisplay = ({ playerId, playerName, playerTeam, week6Opponent, week6IsHome }) => {
   const [opponent, setOpponent] = useState('');
   const [prediction, setPrediction] = useState(null);
+  const [hitRates, setHitRates] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -81,6 +82,47 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
     return '#ef4444'; // Red
   };
 
+  // Get hit rate color based on value
+  const getHitRateColor = (hitRate) => {
+    if (hitRate > 75) return '#10b981'; // Green
+    if (hitRate >= 25) return '#f59e0b'; // Yellow
+    return '#ef4444'; // Red
+  };
+
+  // Get hit rate for a specific stat and threshold
+  const getHitRate = (statType, threshold) => {
+    if (!hitRates || !hitRates.hit_rates || !hitRates.hit_rates[statType]) {
+      return null;
+    }
+    return hitRates.hit_rates[statType][threshold];
+  };
+
+  // Fetch hit rates and auto-load Week 6 opponent prediction
+  useEffect(() => {
+    const fetchData = async () => {
+      console.log('PredictionDisplay useEffect - week6Opponent:', week6Opponent);
+
+      // Fetch hit rates
+      try {
+        const response = await apiService.getHitRates(playerId);
+        setHitRates(response.data.hit_rates);
+      } catch (err) {
+        console.error('Hit rates error:', err);
+      }
+
+      // Auto-load prediction for Week 6 opponent (skip if bye week)
+      if (week6Opponent && week6Opponent !== 'BYE') {
+        console.log('Auto-loading prediction for Week 6 opponent:', week6Opponent);
+        setOpponent(week6Opponent);
+        await fetchPrediction(week6Opponent);
+      } else if (week6Opponent === 'BYE') {
+        console.log('Player on bye week - no predictions to load');
+      }
+    };
+
+    fetchData();
+  }, [playerId, week6Opponent]);
+
   // Filter out player's own team
   const availableOpponents = NFL_TEAMS.filter(team => team.abbr !== playerTeam);
 
@@ -89,7 +131,20 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
       <h3>Performance Predictions</h3>
 
       <div className="opponent-selector">
-        <label htmlFor="opponent-select">Select Opponent:</label>
+        {week6Opponent && (
+          <div className={`week-6-matchup ${week6Opponent === 'BYE' ? 'bye-week' : ''}`}>
+            <span className="matchup-label">Week 6 Matchup:</span>
+            <span className="matchup-info">
+              {week6Opponent === 'BYE'
+                ? 'BYE'
+                : `${week6IsHome ? 'vs' : '@'} ${week6Opponent}`
+              }
+            </span>
+          </div>
+        )}
+        <label htmlFor="opponent-select">
+          {week6Opponent && week6Opponent !== 'BYE' ? 'Or choose different opponent:' : 'Select Opponent:'}
+        </label>
         <select
           id="opponent-select"
           value={opponent}
@@ -139,21 +194,33 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
               <div className="probability-grid">
                 {Object.entries(prediction.passing_predictions.probabilities)
                   .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-                  .map(([yards, prob]) => (
-                    <div key={yards} className="probability-item">
-                      <div className="probability-label">{yards}+ yds</div>
-                      <div className="probability-bar-container">
-                        <div
-                          className="probability-bar"
-                          style={{
-                            width: `${prob}%`,
-                            backgroundColor: getProbabilityColor(prob)
-                          }}
-                        />
-                        <span className="probability-value">{prob}%</span>
+                  .map(([yards, prob]) => {
+                    const hitRate = getHitRate('passing_yards', parseInt(yards));
+                    return (
+                      <div key={yards} className="probability-item">
+                        <div className="probability-label">{yards}+ yds</div>
+                        <div className="probability-bar-container">
+                          <div
+                            className="probability-bar"
+                            style={{
+                              width: `${prob}%`,
+                              backgroundColor: getProbabilityColor(prob)
+                            }}
+                          />
+                          <span className="probability-value">{prob}%</span>
+                          {hitRate !== null && hitRate !== undefined && typeof hitRate === 'number' && (
+                            <span
+                              className="hit-rate-badge"
+                              style={{ color: getHitRateColor(hitRate) }}
+                              title="2025 Hit Rate"
+                            >
+                              {hitRate}% hit rate
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             </div>
           )}
@@ -183,21 +250,33 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
               <div className="probability-grid">
                 {Object.entries(prediction.receiving_predictions.probabilities)
                   .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-                  .map(([yards, prob]) => (
-                    <div key={yards} className="probability-item">
-                      <div className="probability-label">{yards}+ yds</div>
-                      <div className="probability-bar-container">
-                        <div
-                          className="probability-bar"
-                          style={{
-                            width: `${prob}%`,
-                            backgroundColor: getProbabilityColor(prob)
-                          }}
-                        />
-                        <span className="probability-value">{prob}%</span>
+                  .map(([yards, prob]) => {
+                    const hitRate = getHitRate('receiving_yards', parseInt(yards));
+                    return (
+                      <div key={yards} className="probability-item">
+                        <div className="probability-label">{yards}+ yds</div>
+                        <div className="probability-bar-container">
+                          <div
+                            className="probability-bar"
+                            style={{
+                              width: `${prob}%`,
+                              backgroundColor: getProbabilityColor(prob)
+                            }}
+                          />
+                          <span className="probability-value">{prob}%</span>
+                          {hitRate !== null && hitRate !== undefined && typeof hitRate === 'number' && (
+                            <span
+                              className="hit-rate-badge"
+                              style={{ color: getHitRateColor(hitRate) }}
+                              title="2025 Hit Rate"
+                            >
+                              {hitRate}% hit rate
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             </div>
           )}
@@ -228,21 +307,33 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam }) => {
                 {Object.entries(prediction.rushing_predictions.probabilities)
                   .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
                   .filter(([_, prob]) => prob > 0.1) // Only show meaningful probabilities
-                  .map(([yards, prob]) => (
-                    <div key={yards} className="probability-item">
-                      <div className="probability-label">{yards}+ yds</div>
-                      <div className="probability-bar-container">
-                        <div
-                          className="probability-bar"
-                          style={{
-                            width: `${prob}%`,
-                            backgroundColor: getProbabilityColor(prob)
-                          }}
-                        />
-                        <span className="probability-value">{prob}%</span>
+                  .map(([yards, prob]) => {
+                    const hitRate = getHitRate('rushing_yards', parseInt(yards));
+                    return (
+                      <div key={yards} className="probability-item">
+                        <div className="probability-label">{yards}+ yds</div>
+                        <div className="probability-bar-container">
+                          <div
+                            className="probability-bar"
+                            style={{
+                              width: `${prob}%`,
+                              backgroundColor: getProbabilityColor(prob)
+                            }}
+                          />
+                          <span className="probability-value">{prob}%</span>
+                          {hitRate !== null && hitRate !== undefined && typeof hitRate === 'number' && (
+                            <span
+                              className="hit-rate-badge"
+                              style={{ color: getHitRateColor(hitRate) }}
+                              title="2025 Hit Rate"
+                            >
+                              {hitRate}% hit rate
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             </div>
           )}

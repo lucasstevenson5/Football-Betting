@@ -1,11 +1,33 @@
 from flask import Blueprint, jsonify, request
-from models.player import Player, PlayerStats
+from models.player import Player, PlayerStats, ESPNProjection
+from models.schedule import Schedule
 from models import db
 from datetime import datetime
-from sqlalchemy import func
+from sqlalchemy import func, or_
 import numpy as np
 
 player_bp = Blueprint('players', __name__, url_prefix='/api/players')
+
+
+def get_team_week_6_opponent(team_abbr, season=2025):
+    """Get Week 6 opponent for a team, or return 'BYE' if on bye week"""
+    game = Schedule.query.filter(
+        Schedule.season == season,
+        Schedule.week == 6,
+        or_(
+            Schedule.home_team == team_abbr,
+            Schedule.away_team == team_abbr
+        )
+    ).first()
+
+    if not game:
+        # Team is on bye week
+        return {'opponent': 'BYE', 'is_home': None}
+
+    if game.home_team == team_abbr:
+        return {'opponent': game.away_team, 'is_home': True}
+    else:
+        return {'opponent': game.home_team, 'is_home': False}
 
 @player_bp.route('/', methods=['GET'])
 def get_all_players():
@@ -50,13 +72,23 @@ def get_all_players():
 
 @player_bp.route('/<int:player_id>', methods=['GET'])
 def get_player(player_id):
-    """Get a specific player by ID"""
+    """Get a specific player by ID with Week 6 opponent"""
     try:
         player = Player.query.get_or_404(player_id)
+        player_dict = player.to_dict()
+
+        # Add Week 6 opponent info
+        opponent_info = get_team_week_6_opponent(player.team)
+        if opponent_info:
+            player_dict['week_6_opponent'] = opponent_info['opponent']
+            player_dict['week_6_is_home'] = opponent_info['is_home']
+        else:
+            player_dict['week_6_opponent'] = None
+            player_dict['week_6_is_home'] = None
 
         return jsonify({
             'success': True,
-            'player': player.to_dict()
+            'player': player_dict
         }), 200
 
     except Exception as e:
@@ -300,9 +332,19 @@ def get_player_career_stats(player_id):
             }
         }
 
+        # Add Week 6 opponent info to player data
+        player_dict = player.to_dict()
+        opponent_info = get_team_week_6_opponent(player.team)
+        if opponent_info:
+            player_dict['week_6_opponent'] = opponent_info['opponent']
+            player_dict['week_6_is_home'] = opponent_info['is_home']
+        else:
+            player_dict['week_6_opponent'] = None
+            player_dict['week_6_is_home'] = None
+
         return jsonify({
             'success': True,
-            'player': player.to_dict(),
+            'player': player_dict,
             'seasons': seasons_data,
             'career_stats': career_stats
         }), 200
@@ -420,6 +462,181 @@ def get_current_season_players():
             'season': current_season,
             'count': len(players_data),
             'players': players_data
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@player_bp.route('/<int:player_id>/espn-projections', methods=['GET'])
+def get_espn_projections(player_id):
+    """
+    Get ESPN Fantasy Football projections for a specific player
+    Returns per-game averages (season total / 17 games)
+
+    Query params:
+        - season: Season year (default: 2025)
+        - week: Specific week (optional, defaults to season-long projections)
+    """
+    try:
+        player = Player.query.get_or_404(player_id)
+
+        # Get query parameters
+        season = request.args.get('season', 2025, type=int)
+        week = request.args.get('week', type=int)
+
+        # Query ESPN projections
+        query = ESPNProjection.query.filter_by(
+            player_id=player_id,
+            season=season
+        )
+
+        if week is not None:
+            query = query.filter_by(week=week)
+        else:
+            # Get season-long projections (week is NULL)
+            query = query.filter(ESPNProjection.week.is_(None))
+
+        projection = query.first()
+
+        if not projection:
+            return jsonify({
+                'success': False,
+                'error': 'No ESPN projections found for this player',
+                'player': player.to_dict()
+            }), 404
+
+        # Convert to per-game averages (17 game season)
+        GAMES_PER_SEASON = 17
+        proj_dict = projection.to_dict()
+
+        # Create per-game version
+        per_game = {
+            'id': proj_dict['id'],
+            'player_id': proj_dict['player_id'],
+            'espn_athlete_id': proj_dict['espn_athlete_id'],
+            'season': proj_dict['season'],
+            'week': proj_dict['week'],
+            'passing_yards': round(proj_dict['passing_yards'] / GAMES_PER_SEASON, 1),
+            'passing_touchdowns': round(proj_dict['passing_touchdowns'] / GAMES_PER_SEASON, 2),
+            'passing_attempts': round(proj_dict['passing_attempts'] / GAMES_PER_SEASON, 1),
+            'passing_completions': round(proj_dict['passing_completions'] / GAMES_PER_SEASON, 1),
+            'interceptions': round(proj_dict['interceptions'] / GAMES_PER_SEASON, 2),
+            'rushing_yards': round(proj_dict['rushing_yards'] / GAMES_PER_SEASON, 1),
+            'rushing_touchdowns': round(proj_dict['rushing_touchdowns'] / GAMES_PER_SEASON, 2),
+            'rushing_attempts': round(proj_dict['rushing_attempts'] / GAMES_PER_SEASON, 1),
+            'receiving_yards': round(proj_dict['receiving_yards'] / GAMES_PER_SEASON, 1),
+            'receiving_touchdowns': round(proj_dict['receiving_touchdowns'] / GAMES_PER_SEASON, 2),
+            'receptions': round(proj_dict['receptions'] / GAMES_PER_SEASON, 1),
+            'targets': round(proj_dict['targets'] / GAMES_PER_SEASON, 1),
+            'total_touchdowns': round(proj_dict['total_touchdowns'] / GAMES_PER_SEASON, 2),
+            'created_at': proj_dict['created_at'],
+            'updated_at': proj_dict['updated_at']
+        }
+
+        return jsonify({
+            'success': True,
+            'player': player.to_dict(),
+            'projection': per_game,
+            'per_game': True,
+            'games_in_season': GAMES_PER_SEASON
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@player_bp.route('/espn-projections', methods=['GET'])
+def get_all_espn_projections():
+    """
+    Get ESPN weekly projections for all players
+    Returns defense-adjusted weekly projections from ESPN Fantasy API
+
+    Query params:
+        - season: Season year (default: 2025)
+        - week: Specific week (default: current week + 1)
+        - position: Filter by position
+        - limit: Number of results (default: 100)
+        - sort_by: Stat to sort by (default: total_touchdowns)
+    """
+    try:
+        # Get query parameters
+        season = request.args.get('season', 2025, type=int)
+        position = request.args.get('position')
+        limit = request.args.get('limit', 100, type=int)
+        sort_by = request.args.get('sort_by', 'total_touchdowns')
+
+        # Determine which week to show projections for
+        # Default to next week (current week + 1)
+        latest_week_query = db.session.query(
+            func.max(PlayerStats.week)
+        ).filter(
+            PlayerStats.season == season,
+            PlayerStats.week.isnot(None)
+        ).scalar()
+
+        current_week = latest_week_query if latest_week_query else 0
+        week = request.args.get('week', current_week + 1, type=int)
+
+        # Build query joining Player and ESPNProjection
+        query = db.session.query(
+            Player,
+            ESPNProjection
+        ).join(
+            ESPNProjection,
+            Player.id == ESPNProjection.player_id
+        ).filter(
+            ESPNProjection.season == season
+        )
+
+        # Filter by week
+        if week is not None:
+            query = query.filter(ESPNProjection.week == week)
+        else:
+            query = query.filter(ESPNProjection.week.is_(None))
+
+        # Filter by position
+        if position:
+            query = query.filter(Player.position == position.upper())
+
+        # Sort by requested stat
+        sort_column_map = {
+            'passing_yards': ESPNProjection.passing_yards,
+            'passing_touchdowns': ESPNProjection.passing_touchdowns,
+            'rushing_yards': ESPNProjection.rushing_yards,
+            'rushing_touchdowns': ESPNProjection.rushing_touchdowns,
+            'receiving_yards': ESPNProjection.receiving_yards,
+            'receiving_touchdowns': ESPNProjection.receiving_touchdowns,
+            'receptions': ESPNProjection.receptions,
+            'total_touchdowns': ESPNProjection.total_touchdowns
+        }
+
+        sort_column = sort_column_map.get(sort_by, ESPNProjection.total_touchdowns)
+        query = query.order_by(sort_column.desc()).limit(limit)
+
+        results = query.all()
+
+        # Return weekly projections as-is (already defense-adjusted from ESPN)
+        projections_data = []
+        for player, projection in results:
+            player_dict = player.to_dict()
+            player_dict['espn_projection'] = projection.to_dict()
+            projections_data.append(player_dict)
+
+        return jsonify({
+            'success': True,
+            'season': season,
+            'week': week,
+            'count': len(projections_data),
+            'projections': projections_data,
+            'weekly': True,
+            'current_week': current_week
         }), 200
 
     except Exception as e:

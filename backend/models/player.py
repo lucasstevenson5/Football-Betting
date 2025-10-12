@@ -103,3 +103,76 @@ class PlayerStats(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+
+
+class ESPNProjection(db.Model):
+    """ESPN Fantasy Football projections for 2025 season"""
+
+    __tablename__ = 'espn_projections'
+
+    id = db.Column(db.Integer, primary_key=True)
+    player_id = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=False, index=True)
+    espn_athlete_id = db.Column(db.String(20), nullable=False, index=True)
+    season = db.Column(db.Integer, nullable=False, default=2025)
+    week = db.Column(db.Integer, nullable=True)  # NULL for season-long projections
+
+    # Passing projections (QBs)
+    passing_yards = db.Column(db.Float, default=0.0)
+    passing_touchdowns = db.Column(db.Float, default=0.0)
+    passing_attempts = db.Column(db.Float, default=0.0)
+    passing_completions = db.Column(db.Float, default=0.0)
+    interceptions = db.Column(db.Float, default=0.0)
+
+    # Rushing projections (RBs, QBs)
+    rushing_yards = db.Column(db.Float, default=0.0)
+    rushing_touchdowns = db.Column(db.Float, default=0.0)
+    rushing_attempts = db.Column(db.Float, default=0.0)
+
+    # Receiving projections (WRs, TEs, RBs)
+    receiving_yards = db.Column(db.Float, default=0.0)
+    receiving_touchdowns = db.Column(db.Float, default=0.0)
+    receptions = db.Column(db.Float, default=0.0)
+    targets = db.Column(db.Float, default=0.0)
+
+    # Total projections
+    total_touchdowns = db.Column(db.Float, default=0.0)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    player = db.relationship('Player', backref='espn_projections')
+
+    # Composite index for efficient queries
+    __table_args__ = (
+        db.Index('idx_espn_player_season_week', 'player_id', 'season', 'week'),
+        db.Index('idx_espn_athlete_season', 'espn_athlete_id', 'season'),
+    )
+
+    def __repr__(self):
+        return f'<ESPNProjection {self.player.name if self.player else "Unknown"} - Season {self.season} Week {self.week}>'
+
+    def to_dict(self):
+        """Convert projections to dictionary"""
+        return {
+            'id': self.id,
+            'player_id': self.player_id,
+            'espn_athlete_id': self.espn_athlete_id,
+            'season': self.season,
+            'week': self.week,
+            'passing_yards': self.passing_yards,
+            'passing_touchdowns': self.passing_touchdowns,
+            'passing_attempts': self.passing_attempts,
+            'passing_completions': self.passing_completions,
+            'interceptions': self.interceptions,
+            'rushing_yards': self.rushing_yards,
+            'rushing_touchdowns': self.rushing_touchdowns,
+            'rushing_attempts': self.rushing_attempts,
+            'receiving_yards': self.receiving_yards,
+            'receiving_touchdowns': self.receiving_touchdowns,
+            'receptions': self.receptions,
+            'targets': self.targets,
+            'total_touchdowns': self.total_touchdowns,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }

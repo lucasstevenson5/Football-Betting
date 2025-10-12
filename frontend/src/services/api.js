@@ -41,6 +41,22 @@ export const apiService = {
     api.get(`/predictions/touchdown/${playerId}`, { params: { opponent } }),
   getReceptionsPrediction: (playerId, opponent) =>
     api.get(`/predictions/receptions/${playerId}`, { params: { opponent } }),
+  getHitRates: (playerId) =>
+    api.get(`/predictions/hit-rates/${playerId}`),
+
+  // ESPN Projections
+  getESPNProjection: (playerId, params = {}) =>
+    api.get(`/players/${playerId}/espn-projections`, { params }),
+  getAllESPNProjections: (params = {}) =>
+    api.get('/players/espn-projections', { params }),
+
+  // Trending Players
+  getTrendingBeatAverage: () =>
+    api.get('/trending/beat-average'),
+  getTrendingUpwardTrajectory: () =>
+    api.get('/trending/upward-trajectory'),
+  getAllTrending: () =>
+    api.get('/trending/all'),
 };
 
 export default api;

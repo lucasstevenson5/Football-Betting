@@ -154,3 +154,32 @@ def get_touchdown_prediction(player_id):
             'success': False,
             'error': str(e)
         }), 500
+
+
+@prediction_bp.route('/hit-rates/<int:player_id>', methods=['GET'])
+def get_hit_rates(player_id):
+    """
+    Get 2025 season hit rates for a player across different thresholds
+    Returns hit rates for receiving yards, rushing yards, passing yards, receptions, and touchdowns
+    """
+    try:
+        from services.hit_rate_service import HitRateService
+
+        hit_rates = HitRateService.calculate_player_hit_rates(player_id)
+
+        if not hit_rates:
+            return jsonify({
+                'success': False,
+                'error': 'No 2025 data available for this player'
+            }), 404
+
+        return jsonify({
+            'success': True,
+            'hit_rates': hit_rates
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500

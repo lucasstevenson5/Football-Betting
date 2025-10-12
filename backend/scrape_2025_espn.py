@@ -195,29 +195,19 @@ def import_2025_week(week):
                     else:
                         player = matching_candidates[0]
 
-            # Use actual position from ESPN data
+            # Use actual position from ESPN data - always prefer ESPN's position
             espn_position = player_data.get('position')
 
             # Only use positions we care about: QB, RB, WR, TE
             if espn_position in ['QB', 'RB', 'WR', 'TE']:
                 position = espn_position
             else:
-                # Fallback: try to infer from stats if position not available or invalid
-                categories = player_data.get('categories', [])
-                stats = player_data['stats']
+                # Skip players without valid positions - don't try to infer
+                # Position inference was causing TEs to be classified as WRs
+                continue
 
-                if 'passing' in categories:
-                    position = 'QB'
-                elif 'receiving' in categories:
-                    if stats.get('rushes', 0) >= 5 and stats.get('receiving_yards', 0) < stats.get('rushing_yards', 0) * 2:
-                        position = 'RB'
-                    else:
-                        position = 'WR'
-                elif 'rushing' in categories:
-                    position = 'RB'
-                else:
-                    # Skip players we can't categorize
-                    continue
+            # Get stats for this player
+            stats = player_data['stats']
 
             if not player:
                 # Create new player only if we couldn't match
