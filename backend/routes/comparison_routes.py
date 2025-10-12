@@ -126,29 +126,29 @@ def get_projection_comparison():
             if games_played < min_games:
                 continue
 
-            # Build model averages (season average as baseline)
+            # Build model averages (season average as baseline, convert Decimal to float)
             model_avg = {
-                'passing_yards': round(stats_query.avg_pass_yds or 0, 1),
-                'passing_touchdowns': round(stats_query.avg_pass_td or 0, 2),
-                'rushing_yards': round(stats_query.avg_rush_yds or 0, 1),
-                'rushing_touchdowns': round(stats_query.avg_rush_td or 0, 2),
-                'receiving_yards': round(stats_query.avg_rec_yds or 0, 1),
-                'receiving_touchdowns': round(stats_query.avg_rec_td or 0, 2),
-                'receptions': round(stats_query.avg_rec or 0, 1),
-                'targets': round(stats_query.avg_targets or 0, 1),
+                'passing_yards': round(float(stats_query.avg_pass_yds or 0), 1),
+                'passing_touchdowns': round(float(stats_query.avg_pass_td or 0), 2),
+                'rushing_yards': round(float(stats_query.avg_rush_yds or 0), 1),
+                'rushing_touchdowns': round(float(stats_query.avg_rush_td or 0), 2),
+                'receiving_yards': round(float(stats_query.avg_rec_yds or 0), 1),
+                'receiving_touchdowns': round(float(stats_query.avg_rec_td or 0), 2),
+                'receptions': round(float(stats_query.avg_rec or 0), 1),
+                'targets': round(float(stats_query.avg_targets or 0), 1),
                 'games_played': games_played
             }
 
-            # ESPN projections
+            # ESPN projections (convert to float, handle None)
             espn_data = {
-                'passing_yards': round(espn_proj.passing_yards, 1),
-                'passing_touchdowns': round(espn_proj.passing_touchdowns, 2),
-                'rushing_yards': round(espn_proj.rushing_yards, 1),
-                'rushing_touchdowns': round(espn_proj.rushing_touchdowns, 2),
-                'receiving_yards': round(espn_proj.receiving_yards, 1),
-                'receiving_touchdowns': round(espn_proj.receiving_touchdowns, 2),
-                'receptions': round(espn_proj.receptions, 1),
-                'targets': round(espn_proj.targets, 1)
+                'passing_yards': round(float(espn_proj.passing_yards or 0), 1),
+                'passing_touchdowns': round(float(espn_proj.passing_touchdowns or 0), 2),
+                'rushing_yards': round(float(espn_proj.rushing_yards or 0), 1),
+                'rushing_touchdowns': round(float(espn_proj.rushing_touchdowns or 0), 2),
+                'receiving_yards': round(float(espn_proj.receiving_yards or 0), 1),
+                'receiving_touchdowns': round(float(espn_proj.receiving_touchdowns or 0), 2),
+                'receptions': round(float(espn_proj.receptions or 0), 1),
+                'targets': round(float(espn_proj.targets or 0), 1)
             }
 
             # Calculate variances (ESPN - Model)
@@ -286,19 +286,19 @@ def get_comparison_summary():
 
             position_summary[pos]['count'] += 1
 
-            # Accumulate ESPN projections
+            # Accumulate ESPN projections (convert Decimal to float)
             if pos == 'QB':
                 key = 'passing_yards'
-                espn_val = espn_proj.passing_yards
-                model_val = stats_query.avg_pass_yds or 0
+                espn_val = float(espn_proj.passing_yards or 0)
+                model_val = float(stats_query.avg_pass_yds or 0)
             elif pos == 'RB':
                 key = 'rushing_yards'
-                espn_val = espn_proj.rushing_yards
-                model_val = stats_query.avg_rush_yds or 0
+                espn_val = float(espn_proj.rushing_yards or 0)
+                model_val = float(stats_query.avg_rush_yds or 0)
             else:  # WR, TE
                 key = 'receiving_yards'
-                espn_val = espn_proj.receiving_yards
-                model_val = stats_query.avg_rec_yds or 0
+                espn_val = float(espn_proj.receiving_yards or 0)
+                model_val = float(stats_query.avg_rec_yds or 0)
 
             if key not in position_summary[pos]['espn_avg']:
                 position_summary[pos]['espn_avg'][key] = []
