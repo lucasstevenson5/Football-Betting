@@ -49,7 +49,9 @@ const POSITION_COLORS = {
 const PlayerCard = ({ player, onClick }) => {
   const [showStats, setShowStats] = useState(false);
   const [hoverTimer, setHoverTimer] = useState(null);
+  const [activeTab, setActiveTab] = useState('season');
   const stats = player.current_season_stats || {};
+  const espnProjection = player.espn_projection || null;
 
   const totalTouchdowns = player.position === 'QB'
     ? (stats.total_passing_touchdowns || 0) + (stats.total_rushing_touchdowns || 0)
@@ -83,6 +85,255 @@ const PlayerCard = ({ player, onClick }) => {
     };
   }, [hoverTimer]);
 
+  const renderSeasonStats = () => (
+    <div className="player-stats">
+      <div className="stat-group">
+        <div className="stat">
+          <span className="stat-label">Games</span>
+          <span className="stat-value">{stats.games_played || 0}</span>
+        </div>
+        <div className="stat">
+          <span className="stat-label">Total Yards</span>
+          <span className="stat-value">{totalYards.toLocaleString()}</span>
+        </div>
+        <div className="stat">
+          <span className="stat-label">Total TDs</span>
+          <span className="stat-value">{totalTouchdowns}</span>
+        </div>
+      </div>
+
+      {player.position === 'QB' ? (
+        <div className="stat-group passing">
+          <h4>Passing</h4>
+          <div className="stat">
+            <span className="stat-label">Completions</span>
+            <span className="stat-value">{stats.total_completions || 0}</span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">Yards</span>
+            <span className="stat-value">
+              {(stats.total_passing_yards || 0).toLocaleString()}
+            </span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">TDs</span>
+            <span className="stat-value">{stats.total_passing_touchdowns || 0}</span>
+          </div>
+        </div>
+      ) : null}
+
+      {player.position === 'RB' ? (
+        <>
+          <div className="stat-group rushing">
+            <h4>Rushing</h4>
+            <div className="stat">
+              <span className="stat-label">Carries</span>
+              <span className="stat-value">{stats.total_rushes || 0}</span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">Yards</span>
+              <span className="stat-value">
+                {(stats.total_rushing_yards || 0).toLocaleString()}
+              </span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">TDs</span>
+              <span className="stat-value">{stats.total_rushing_touchdowns || 0}</span>
+            </div>
+          </div>
+          <div className="stat-group receiving">
+            <h4>Receiving</h4>
+            <div className="stat">
+              <span className="stat-label">Receptions</span>
+              <span className="stat-value">{stats.total_receptions || 0}</span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">Yards</span>
+              <span className="stat-value">
+                {(stats.total_receiving_yards || 0).toLocaleString()}
+              </span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">TDs</span>
+              <span className="stat-value">{stats.total_receiving_touchdowns || 0}</span>
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {player.position === 'WR' ? (
+        <>
+          <div className="stat-group receiving">
+            <h4>Receiving</h4>
+            <div className="stat">
+              <span className="stat-label">Receptions</span>
+              <span className="stat-value">{stats.total_receptions || 0}</span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">Yards</span>
+              <span className="stat-value">
+                {(stats.total_receiving_yards || 0).toLocaleString()}
+              </span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">TDs</span>
+              <span className="stat-value">{stats.total_receiving_touchdowns || 0}</span>
+            </div>
+          </div>
+          <div className="stat-group rushing">
+            <h4>Rushing</h4>
+            <div className="stat">
+              <span className="stat-label">Carries</span>
+              <span className="stat-value">{stats.total_rushes || 0}</span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">Yards</span>
+              <span className="stat-value">
+                {(stats.total_rushing_yards || 0).toLocaleString()}
+              </span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">TDs</span>
+              <span className="stat-value">{stats.total_rushing_touchdowns || 0}</span>
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {player.position === 'TE' ? (
+        <div className="stat-group receiving">
+          <h4>Receiving</h4>
+          <div className="stat">
+            <span className="stat-label">Receptions</span>
+            <span className="stat-value">{stats.total_receptions || 0}</span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">Yards</span>
+            <span className="stat-value">
+              {(stats.total_receiving_yards || 0).toLocaleString()}
+            </span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">TDs</span>
+            <span className="stat-value">{stats.total_receiving_touchdowns || 0}</span>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const renderESPNProjection = () => {
+    if (!espnProjection) {
+      return (
+        <div className="player-stats">
+          <div className="stat-group">
+            <p>No ESPN projection available</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="player-stats">
+        <div className="stat-group">
+          <div className="stat">
+            <span className="stat-label">Week</span>
+            <span className="stat-value">{espnProjection.week}</span>
+          </div>
+        </div>
+
+        {player.position === 'QB' ? (
+          <div className="stat-group passing">
+            <h4>Passing Projection</h4>
+            <div className="stat">
+              <span className="stat-label">Pass Yards</span>
+              <span className="stat-value">
+                {espnProjection.passing_yards ? espnProjection.passing_yards.toFixed(1) : '0.0'}
+              </span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">Pass TDs</span>
+              <span className="stat-value">
+                {espnProjection.passing_touchdowns ? espnProjection.passing_touchdowns.toFixed(1) : '0.0'}
+              </span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">INTs</span>
+              <span className="stat-value">
+                {espnProjection.interceptions ? espnProjection.interceptions.toFixed(1) : '0.0'}
+              </span>
+            </div>
+          </div>
+        ) : null}
+
+        {(player.position === 'RB' || player.position === 'WR') ? (
+          <>
+            <div className="stat-group rushing">
+              <h4>Rushing Projection</h4>
+              <div className="stat">
+                <span className="stat-label">Rush Yards</span>
+                <span className="stat-value">
+                  {espnProjection.rushing_yards ? espnProjection.rushing_yards.toFixed(1) : '0.0'}
+                </span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">Rush TDs</span>
+                <span className="stat-value">
+                  {espnProjection.rushing_touchdowns ? espnProjection.rushing_touchdowns.toFixed(1) : '0.0'}
+                </span>
+              </div>
+            </div>
+            <div className="stat-group receiving">
+              <h4>Receiving Projection</h4>
+              <div className="stat">
+                <span className="stat-label">Receptions</span>
+                <span className="stat-value">
+                  {espnProjection.receptions ? espnProjection.receptions.toFixed(1) : '0.0'}
+                </span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">Rec Yards</span>
+                <span className="stat-value">
+                  {espnProjection.receiving_yards ? espnProjection.receiving_yards.toFixed(1) : '0.0'}
+                </span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">Rec TDs</span>
+                <span className="stat-value">
+                  {espnProjection.receiving_touchdowns ? espnProjection.receiving_touchdowns.toFixed(1) : '0.0'}
+                </span>
+              </div>
+            </div>
+          </>
+        ) : null}
+
+        {player.position === 'TE' ? (
+          <div className="stat-group receiving">
+            <h4>Receiving Projection</h4>
+            <div className="stat">
+              <span className="stat-label">Receptions</span>
+              <span className="stat-value">
+                {espnProjection.receptions ? espnProjection.receptions.toFixed(1) : '0.0'}
+              </span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">Rec Yards</span>
+              <span className="stat-value">
+                {espnProjection.receiving_yards ? espnProjection.receiving_yards.toFixed(1) : '0.0'}
+              </span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">Rec TDs</span>
+              <span className="stat-value">
+                {espnProjection.receiving_touchdowns ? espnProjection.receiving_touchdowns.toFixed(1) : '0.0'}
+              </span>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
   return (
     <div
       className="player-card"
@@ -115,140 +366,13 @@ const PlayerCard = ({ player, onClick }) => {
       </div>
 
       {showStats && (
-        <div className="player-stats">
-        <div className="stat-group">
-          <div className="stat">
-            <span className="stat-label">Games</span>
-            <span className="stat-value">{stats.games_played || 0}</span>
+        <>
+          <div className="stats-tabs">
+            <button className={`tab-button ${activeTab === 'season' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setActiveTab('season'); }}>Season Stats</button>
+            <button className={`tab-button ${activeTab === 'espn' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setActiveTab('espn'); }}>ESPN Projection</button>
           </div>
-          <div className="stat">
-            <span className="stat-label">Total Yards</span>
-            <span className="stat-value">{totalYards.toLocaleString()}</span>
-          </div>
-          <div className="stat">
-            <span className="stat-label">Total TDs</span>
-            <span className="stat-value">{totalTouchdowns}</span>
-          </div>
-        </div>
-
-        {player.position === 'QB' ? (
-          <div className="stat-group passing">
-            <h4>Passing</h4>
-            <div className="stat">
-              <span className="stat-label">Completions</span>
-              <span className="stat-value">{stats.total_completions || 0}</span>
-            </div>
-            <div className="stat">
-              <span className="stat-label">Yards</span>
-              <span className="stat-value">
-                {(stats.total_passing_yards || 0).toLocaleString()}
-              </span>
-            </div>
-            <div className="stat">
-              <span className="stat-label">TDs</span>
-              <span className="stat-value">{stats.total_passing_touchdowns || 0}</span>
-            </div>
-          </div>
-        ) : null}
-
-        {player.position === 'RB' ? (
-          <>
-            <div className="stat-group rushing">
-              <h4>Rushing</h4>
-              <div className="stat">
-                <span className="stat-label">Carries</span>
-                <span className="stat-value">{stats.total_rushes || 0}</span>
-              </div>
-              <div className="stat">
-                <span className="stat-label">Yards</span>
-                <span className="stat-value">
-                  {(stats.total_rushing_yards || 0).toLocaleString()}
-                </span>
-              </div>
-              <div className="stat">
-                <span className="stat-label">TDs</span>
-                <span className="stat-value">{stats.total_rushing_touchdowns || 0}</span>
-              </div>
-            </div>
-            <div className="stat-group receiving">
-              <h4>Receiving</h4>
-              <div className="stat">
-                <span className="stat-label">Receptions</span>
-                <span className="stat-value">{stats.total_receptions || 0}</span>
-              </div>
-              <div className="stat">
-                <span className="stat-label">Yards</span>
-                <span className="stat-value">
-                  {(stats.total_receiving_yards || 0).toLocaleString()}
-                </span>
-              </div>
-              <div className="stat">
-                <span className="stat-label">TDs</span>
-                <span className="stat-value">{stats.total_receiving_touchdowns || 0}</span>
-              </div>
-            </div>
-          </>
-        ) : null}
-
-        {player.position === 'WR' ? (
-          <>
-            <div className="stat-group receiving">
-              <h4>Receiving</h4>
-              <div className="stat">
-                <span className="stat-label">Receptions</span>
-                <span className="stat-value">{stats.total_receptions || 0}</span>
-              </div>
-              <div className="stat">
-                <span className="stat-label">Yards</span>
-                <span className="stat-value">
-                  {(stats.total_receiving_yards || 0).toLocaleString()}
-                </span>
-              </div>
-              <div className="stat">
-                <span className="stat-label">TDs</span>
-                <span className="stat-value">{stats.total_receiving_touchdowns || 0}</span>
-              </div>
-            </div>
-            <div className="stat-group rushing">
-              <h4>Rushing</h4>
-              <div className="stat">
-                <span className="stat-label">Carries</span>
-                <span className="stat-value">{stats.total_rushes || 0}</span>
-              </div>
-              <div className="stat">
-                <span className="stat-label">Yards</span>
-                <span className="stat-value">
-                  {(stats.total_rushing_yards || 0).toLocaleString()}
-                </span>
-              </div>
-              <div className="stat">
-                <span className="stat-label">TDs</span>
-                <span className="stat-value">{stats.total_rushing_touchdowns || 0}</span>
-              </div>
-            </div>
-          </>
-        ) : null}
-
-        {player.position === 'TE' ? (
-          <div className="stat-group receiving">
-            <h4>Receiving</h4>
-            <div className="stat">
-              <span className="stat-label">Receptions</span>
-              <span className="stat-value">{stats.total_receptions || 0}</span>
-            </div>
-            <div className="stat">
-              <span className="stat-label">Yards</span>
-              <span className="stat-value">
-                {(stats.total_receiving_yards || 0).toLocaleString()}
-              </span>
-            </div>
-            <div className="stat">
-              <span className="stat-label">TDs</span>
-              <span className="stat-value">{stats.total_receiving_touchdowns || 0}</span>
-            </div>
-          </div>
-        ) : null}
-        </div>
+          {activeTab === 'season' ? renderSeasonStats() : renderESPNProjection()}
+        </>
       )}
     </div>
   );

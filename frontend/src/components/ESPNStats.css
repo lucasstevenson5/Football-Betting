@@ -104,23 +104,32 @@
 }
 
 .espn-table tbody tr {
-  border-bottom: 1px solid #f1f5f9;
-  transition: background-color 0.15s;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+  transition: all 0.2s;
+}
+
+.espn-table tbody tr:nth-child(even) {
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.98) 100%);
 }
 
 .espn-table tbody tr:hover {
-  background-color: #f8fafc;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .espn-table td {
   padding: 14px 16px;
-  color: #1f2937;
+  color: #334155;
   font-size: 14px;
+  font-weight: 500;
 }
 
 .espn-table .player-name {
   font-weight: 700 !important;
-  color: #000000 !important;
+  color: #1e293b !important;
+  font-size: 15px !important;
 }
 
 .stat-cell {

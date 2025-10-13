@@ -455,6 +455,30 @@ def get_current_season_players():
                 'total_passing_touchdowns': result.total_passing_tds or 0,
                 'total_interceptions': result.total_interceptions or 0
             }
+
+            # Add ESPN projection for current season
+            from models.player import ESPNProjection
+            espn_proj = ESPNProjection.query.filter_by(
+                player_id=player.id,
+                season=current_season
+            ).order_by(ESPNProjection.week.desc()).first()
+
+            if espn_proj:
+                player_dict['espn_projection'] = {
+                    'week': espn_proj.week,
+                    'season': espn_proj.season,
+                    'passing_yards': float(espn_proj.passing_yards) if espn_proj.passing_yards else 0.0,
+                    'passing_touchdowns': float(espn_proj.passing_touchdowns) if espn_proj.passing_touchdowns else 0.0,
+                    'interceptions': float(espn_proj.interceptions) if espn_proj.interceptions else 0.0,
+                    'rushing_yards': float(espn_proj.rushing_yards) if espn_proj.rushing_yards else 0.0,
+                    'rushing_touchdowns': float(espn_proj.rushing_touchdowns) if espn_proj.rushing_touchdowns else 0.0,
+                    'receptions': float(espn_proj.receptions) if espn_proj.receptions else 0.0,
+                    'receiving_yards': float(espn_proj.receiving_yards) if espn_proj.receiving_yards else 0.0,
+                    'receiving_touchdowns': float(espn_proj.receiving_touchdowns) if espn_proj.receiving_touchdowns else 0.0
+                }
+            else:
+                player_dict['espn_projection'] = None
+
             players_data.append(player_dict)
 
         return jsonify({
