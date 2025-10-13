@@ -44,6 +44,8 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, week6Opponent, we
   const [hitRates, setHitRates] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [predictionSource, setPredictionSource] = useState('model'); // 'model' or 'espn'
+  const [espnProjection, setEspnProjection] = useState(null);
 
   const fetchPrediction = async (opponentTeam) => {
     if (!opponentTeam) {
@@ -61,6 +63,17 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, week6Opponent, we
       console.error('Prediction error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchESPNProjection = async () => {
+    try {
+      const response = await apiService.getESPNProjection(playerId);
+      if (response.data.projections && response.data.projections.length > 0) {
+        setEspnProjection(response.data.projections[0]); // Get most recent
+      }
+    } catch (err) {
+      console.error('ESPN projection error:', err);
     }
   };
 
@@ -110,6 +123,9 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, week6Opponent, we
         console.error('Hit rates error:', err);
       }
 
+      // Fetch ESPN projection
+      fetchESPNProjection();
+
       // Auto-load prediction for Week 6 opponent (skip if bye week)
       if (week6Opponent && week6Opponent !== 'BYE') {
         console.log('Auto-loading prediction for Week 6 opponent:', week6Opponent);
@@ -158,6 +174,21 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, week6Opponent, we
         </select>
       </div>
 
+      <div className="prediction-tabs">
+        <button
+          className={`prediction-tab ${predictionSource === 'model' ? 'active' : ''}`}
+          onClick={() => setPredictionSource('model')}
+        >
+          Model Prediction
+        </button>
+        <button
+          className={`prediction-tab ${predictionSource === 'espn' ? 'active' : ''}`}
+          onClick={() => setPredictionSource('espn')}
+        >
+          ESPN Projection
+        </button>
+      </div>
+
       {loading && (
         <div className="prediction-loading">
           <div className="spinner-small"></div>
@@ -167,7 +198,7 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, week6Opponent, we
 
       {error && <div className="prediction-error">{error}</div>}
 
-      {prediction && !loading && (
+      {predictionSource === 'model' && prediction && !loading && (
         <div className="predictions-container">
           {/* QB Passing Predictions */}
           {prediction.passing_predictions && (
@@ -460,6 +491,93 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, week6Opponent, we
               Time-weighted model prioritizes recent performance with current season weighted 2x higher.
             </p>
           </div>
+        </div>
+      )}
+
+      {predictionSource === 'espn' && espnProjection && (
+        <div className="espn-projection-display">
+          <h4>ESPN Week {espnProjection.week} Projection</h4>
+
+          <div className="espn-stats-container">
+            {/* QB Stats */}
+            {espnProjection.passing_yards !== null && espnProjection.passing_yards !== undefined && (
+              <div className="espn-stat-card">
+                <h5>Passing Stats</h5>
+                <div className="espn-stat-grid">
+                  <div className="espn-stat-item">
+                    <span className="espn-stat-label">Passing Yards</span>
+                    <span className="espn-stat-value">{espnProjection.passing_yards}</span>
+                  </div>
+                  {espnProjection.passing_tds !== null && espnProjection.passing_tds !== undefined && (
+                    <div className="espn-stat-item">
+                      <span className="espn-stat-label">Passing TDs</span>
+                      <span className="espn-stat-value">{espnProjection.passing_tds}</span>
+                    </div>
+                  )}
+                  {espnProjection.interceptions !== null && espnProjection.interceptions !== undefined && (
+                    <div className="espn-stat-item">
+                      <span className="espn-stat-label">Interceptions</span>
+                      <span className="espn-stat-value">{espnProjection.interceptions}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Rushing Stats */}
+            {(espnProjection.rushing_yards !== null && espnProjection.rushing_yards !== undefined && espnProjection.rushing_yards > 0) && (
+              <div className="espn-stat-card">
+                <h5>Rushing Stats</h5>
+                <div className="espn-stat-grid">
+                  <div className="espn-stat-item">
+                    <span className="espn-stat-label">Rushing Yards</span>
+                    <span className="espn-stat-value">{espnProjection.rushing_yards}</span>
+                  </div>
+                  {espnProjection.rushing_tds !== null && espnProjection.rushing_tds !== undefined && (
+                    <div className="espn-stat-item">
+                      <span className="espn-stat-label">Rushing TDs</span>
+                      <span className="espn-stat-value">{espnProjection.rushing_tds}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Receiving Stats */}
+            {(espnProjection.receiving_yards !== null && espnProjection.receiving_yards !== undefined && espnProjection.receiving_yards > 0) && (
+              <div className="espn-stat-card">
+                <h5>Receiving Stats</h5>
+                <div className="espn-stat-grid">
+                  <div className="espn-stat-item">
+                    <span className="espn-stat-label">Receptions</span>
+                    <span className="espn-stat-value">{espnProjection.receptions || 0}</span>
+                  </div>
+                  <div className="espn-stat-item">
+                    <span className="espn-stat-label">Receiving Yards</span>
+                    <span className="espn-stat-value">{espnProjection.receiving_yards}</span>
+                  </div>
+                  {espnProjection.receiving_tds !== null && espnProjection.receiving_tds !== undefined && (
+                    <div className="espn-stat-item">
+                      <span className="espn-stat-label">Receiving TDs</span>
+                      <span className="espn-stat-value">{espnProjection.receiving_tds}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="espn-projection-info">
+            <p className="info-text">
+              <strong>ESPN Projection:</strong> Data sourced from ESPN's fantasy projections.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {predictionSource === 'espn' && !espnProjection && (
+        <div className="espn-no-data">
+          <p>No ESPN projection data available for this player.</p>
         </div>
       )}
     </div>

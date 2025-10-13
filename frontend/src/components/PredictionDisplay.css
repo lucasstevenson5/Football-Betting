@@ -401,6 +401,116 @@
   color: #1f2937;
 }
 
+/* Prediction Tabs */
+.prediction-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.prediction-tab {
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #6b7280;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  bottom: -2px;
+}
+
+.prediction-tab:hover {
+  color: #3b82f6;
+}
+
+.prediction-tab.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+}
+
+/* ESPN Projection Display */
+.espn-projection-display {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.espn-projection-display h4 {
+  margin: 0 0 15px 0;
+  font-size: 20px;
+  color: #374151;
+  font-weight: 600;
+}
+
+.espn-stats-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.espn-stat-card {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.espn-stat-card h5 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  color: #4b5563;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.espn-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.espn-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 15px;
+  background-color: white;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.espn-stat-label {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.espn-stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.espn-projection-info {
+  margin-top: 10px;
+}
+
+.espn-no-data {
+  padding: 30px;
+  text-align: center;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #6b7280;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .projection-summary {
@@ -426,6 +536,19 @@
   }
 
   .int-breakdown {
+    grid-template-columns: 1fr;
+  }
+
+  .prediction-tabs {
+    flex-wrap: wrap;
+  }
+
+  .prediction-tab {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .espn-stat-grid {
     grid-template-columns: 1fr;
   }
 }
