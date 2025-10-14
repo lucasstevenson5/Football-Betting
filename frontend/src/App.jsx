@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PlayerList from './components/PlayerList';
 import ParlayBuilder from './components/ParlayBuilder';
-import ProjectionComparison from './components/ProjectionComparison';
 import TrendingPlayers from './components/TrendingPlayers';
 import './App.css';
 
@@ -28,12 +27,6 @@ function App() {
             Player Stats
           </button>
           <button
-            className={`app-tab ${activeTab === 'comparison' ? 'active' : ''}`}
-            onClick={() => setActiveTab('comparison')}
-          >
-            Projection Comparison
-          </button>
-          <button
             className={`app-tab ${activeTab === 'trending' ? 'active' : ''}`}
             onClick={() => setActiveTab('trending')}
           >
@@ -51,7 +44,6 @@ function App() {
       {/* Content */}
       <div className="app-content">
         {activeTab === 'players' && <PlayerList />}
-        {activeTab === 'comparison' && <ProjectionComparison />}
         {activeTab === 'trending' && <TrendingPlayers />}
         {activeTab === 'parlays' && <ParlayBuilder />}
       </div>

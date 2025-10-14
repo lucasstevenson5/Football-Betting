@@ -49,6 +49,8 @@ export const apiService = {
     api.get(`/players/${playerId}/espn-projections`, { params }),
   getAllESPNProjections: (params = {}) =>
     api.get('/players/espn-projections', { params }),
+  getProjectionComparison: (playerId, params = {}) =>
+    api.get(`/players/${playerId}/projection-comparison`, { params }),
 
   // Trending Players
   getTrendingBeatAverage: () =>

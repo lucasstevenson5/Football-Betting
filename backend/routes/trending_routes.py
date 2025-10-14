@@ -243,12 +243,16 @@ def check_upward_trajectory(player, season=2025):
 
     pct_increase = ((last_week_yards - first_week_yards) / first_week_yards * 100) if first_week_yards > 0 else 0
 
+    # Get season average for display
+    season_avg = calculate_season_average(player.id, season, player.position)
+
     return {
         'player': player.to_dict(),
         'weekly_data': weekly_data,
         'improvements': improvements,
         'total_comparisons': len(weekly_data) - 1,
-        'percentage_increase': round(pct_increase, 1)
+        'percentage_increase': round(pct_increase, 1),
+        'season_average': season_avg
     }
 
 @trending_bp.route('/beat-average', methods=['GET'])

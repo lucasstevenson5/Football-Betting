@@ -499,11 +499,11 @@ def get_current_season_players():
 def get_espn_projections(player_id):
     """
     Get ESPN Fantasy Football projections for a specific player
-    Returns per-game averages (season total / 17 games)
+    Returns week-specific projections (already per-game values)
 
     Query params:
         - season: Season year (default: 2025)
-        - week: Specific week (optional, defaults to season-long projections)
+        - week: Specific week (optional, defaults to current week)
     """
     try:
         player = Player.query.get_or_404(player_id)
@@ -512,19 +512,20 @@ def get_espn_projections(player_id):
         season = request.args.get('season', 2025, type=int)
         week = request.args.get('week', type=int)
 
-        # Query ESPN projections
-        query = ESPNProjection.query.filter_by(
+        # If no week specified, determine current week from latest player stats
+        if week is None:
+            latest_week_query = PlayerStats.query.filter_by(
+                season=season
+            ).order_by(PlayerStats.week.desc()).first()
+            current_week = latest_week_query.week if latest_week_query else 5
+            week = current_week + 1  # Get projection for next week
+
+        # Query ESPN projections for the specific week
+        projection = ESPNProjection.query.filter_by(
             player_id=player_id,
-            season=season
-        )
-
-        if week is not None:
-            query = query.filter_by(week=week)
-        else:
-            # Get season-long projections (week is NULL)
-            query = query.filter(ESPNProjection.week.is_(None))
-
-        projection = query.first()
+            season=season,
+            week=week
+        ).first()
 
         if not projection:
             return jsonify({
@@ -533,40 +534,14 @@ def get_espn_projections(player_id):
                 'player': player.to_dict()
             }), 404
 
-        # Convert to per-game averages (17 game season)
-        GAMES_PER_SEASON = 17
+        # Week-specific projections are already per-game values
         proj_dict = projection.to_dict()
-
-        # Create per-game version
-        per_game = {
-            'id': proj_dict['id'],
-            'player_id': proj_dict['player_id'],
-            'espn_athlete_id': proj_dict['espn_athlete_id'],
-            'season': proj_dict['season'],
-            'week': proj_dict['week'],
-            'passing_yards': round(proj_dict['passing_yards'] / GAMES_PER_SEASON, 1),
-            'passing_touchdowns': round(proj_dict['passing_touchdowns'] / GAMES_PER_SEASON, 2),
-            'passing_attempts': round(proj_dict['passing_attempts'] / GAMES_PER_SEASON, 1),
-            'passing_completions': round(proj_dict['passing_completions'] / GAMES_PER_SEASON, 1),
-            'interceptions': round(proj_dict['interceptions'] / GAMES_PER_SEASON, 2),
-            'rushing_yards': round(proj_dict['rushing_yards'] / GAMES_PER_SEASON, 1),
-            'rushing_touchdowns': round(proj_dict['rushing_touchdowns'] / GAMES_PER_SEASON, 2),
-            'rushing_attempts': round(proj_dict['rushing_attempts'] / GAMES_PER_SEASON, 1),
-            'receiving_yards': round(proj_dict['receiving_yards'] / GAMES_PER_SEASON, 1),
-            'receiving_touchdowns': round(proj_dict['receiving_touchdowns'] / GAMES_PER_SEASON, 2),
-            'receptions': round(proj_dict['receptions'] / GAMES_PER_SEASON, 1),
-            'targets': round(proj_dict['targets'] / GAMES_PER_SEASON, 1),
-            'total_touchdowns': round(proj_dict['total_touchdowns'] / GAMES_PER_SEASON, 2),
-            'created_at': proj_dict['created_at'],
-            'updated_at': proj_dict['updated_at']
-        }
 
         return jsonify({
             'success': True,
             'player': player.to_dict(),
-            'projection': per_game,
-            'per_game': True,
-            'games_in_season': GAMES_PER_SEASON
+            'projection': proj_dict,
+            'week': week
         }), 200
 
     except Exception as e:
@@ -661,6 +636,120 @@ def get_all_espn_projections():
             'projections': projections_data,
             'weekly': True,
             'current_week': current_week
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@player_bp.route('/<int:player_id>/projection-comparison', methods=['GET'])
+def get_player_projection_comparison(player_id):
+    """
+    Compare ESPN projection vs Model's season average for a single player
+
+    Query params:
+        - season: Season year (default: 2025)
+        - week: Specific week (optional, defaults to current week + 1)
+
+    Returns:
+        Comparison between ESPN projection and model's season average
+    """
+    try:
+        player = Player.query.get_or_404(player_id)
+
+        # Get query parameters
+        season = request.args.get('season', 2025, type=int)
+        week = request.args.get('week', type=int)
+
+        # If no week specified, determine current week
+        if week is None:
+            latest_week_query = PlayerStats.query.filter_by(
+                season=season
+            ).order_by(PlayerStats.week.desc()).first()
+            current_week = latest_week_query.week if latest_week_query else 5
+            week = current_week + 1
+
+        # Get ESPN projection for this week
+        espn_proj = ESPNProjection.query.filter_by(
+            player_id=player_id,
+            season=season,
+            week=week
+        ).first()
+
+        if not espn_proj:
+            return jsonify({
+                'success': False,
+                'error': 'No ESPN projection found for this player and week',
+                'player': player.to_dict(),
+                'week': week
+            }), 404
+
+        # Calculate player's season averages from 2025 stats
+        stats_query = db.session.query(
+            func.count(PlayerStats.id).label('games'),
+            func.avg(PlayerStats.passing_yards).label('avg_pass_yds'),
+            func.avg(PlayerStats.passing_touchdowns).label('avg_pass_td'),
+            func.avg(PlayerStats.rushing_yards).label('avg_rush_yds'),
+            func.avg(PlayerStats.rushing_touchdowns).label('avg_rush_td'),
+            func.avg(PlayerStats.receiving_yards).label('avg_rec_yds'),
+            func.avg(PlayerStats.receiving_touchdowns).label('avg_rec_td'),
+            func.avg(PlayerStats.receptions).label('avg_rec'),
+            func.avg(PlayerStats.targets).label('avg_targets')
+        ).filter(
+            PlayerStats.player_id == player.id,
+            PlayerStats.season == season,
+            PlayerStats.week.isnot(None)
+        ).first()
+
+        games_played = stats_query.games or 0
+
+        # Build model averages (season average as baseline)
+        model_avg = {
+            'passing_yards': round(float(stats_query.avg_pass_yds or 0), 1),
+            'passing_touchdowns': round(float(stats_query.avg_pass_td or 0), 1),
+            'rushing_yards': round(float(stats_query.avg_rush_yds or 0), 1),
+            'rushing_touchdowns': round(float(stats_query.avg_rush_td or 0), 1),
+            'receiving_yards': round(float(stats_query.avg_rec_yds or 0), 1),
+            'receiving_touchdowns': round(float(stats_query.avg_rec_td or 0), 1),
+            'receptions': round(float(stats_query.avg_rec or 0), 1),
+            'targets': round(float(stats_query.avg_targets or 0), 1),
+            'games_played': games_played
+        }
+
+        # ESPN projections (convert to float)
+        espn_data = {
+            'passing_yards': round(float(espn_proj.passing_yards or 0), 1),
+            'passing_touchdowns': round(float(espn_proj.passing_touchdowns or 0), 1),
+            'rushing_yards': round(float(espn_proj.rushing_yards or 0), 1),
+            'rushing_touchdowns': round(float(espn_proj.rushing_touchdowns or 0), 1),
+            'receiving_yards': round(float(espn_proj.receiving_yards or 0), 1),
+            'receiving_touchdowns': round(float(espn_proj.receiving_touchdowns or 0), 1),
+            'receptions': round(float(espn_proj.receptions or 0), 1),
+            'targets': round(float(espn_proj.targets or 0), 1)
+        }
+
+        # Calculate variances (ESPN - Model)
+        variance = {}
+        for stat_key in ['passing_yards', 'passing_touchdowns', 'rushing_yards',
+                        'rushing_touchdowns', 'receiving_yards', 'receiving_touchdowns',
+                        'receptions', 'targets']:
+            espn_val = espn_data[stat_key]
+            model_val = model_avg[stat_key]
+
+            # Only calculate variance for meaningful stats
+            if espn_val > 0 or model_val > 0:
+                variance[stat_key] = round(espn_val - model_val, 1)
+
+        return jsonify({
+            'success': True,
+            'player': player.to_dict(),
+            'week': week,
+            'model_average': model_avg,
+            'espn_projection': espn_data,
+            'variance': variance
         }), 200
 
     except Exception as e:

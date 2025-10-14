@@ -38,14 +38,15 @@ const NFL_TEAMS = [
   { name: 'Commanders', abbr: 'WAS' }
 ].sort((a, b) => a.name.localeCompare(b.name));
 
-const PredictionDisplay = ({ playerId, playerName, playerTeam, week6Opponent, week6IsHome }) => {
+const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, week6Opponent, week6IsHome }) => {
   const [opponent, setOpponent] = useState('');
   const [prediction, setPrediction] = useState(null);
   const [hitRates, setHitRates] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [predictionSource, setPredictionSource] = useState('model'); // 'model' or 'espn'
+  const [predictionSource, setPredictionSource] = useState('model'); // 'model', 'espn', or 'comparison'
   const [espnProjection, setEspnProjection] = useState(null);
+  const [comparison, setComparison] = useState(null);
 
   const fetchPrediction = async (opponentTeam) => {
     if (!opponentTeam) {
@@ -69,11 +70,22 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, week6Opponent, we
   const fetchESPNProjection = async () => {
     try {
       const response = await apiService.getESPNProjection(playerId);
-      if (response.data.projections && response.data.projections.length > 0) {
-        setEspnProjection(response.data.projections[0]); // Get most recent
+      if (response.data.success && response.data.projection) {
+        setEspnProjection(response.data.projection);
       }
     } catch (err) {
       console.error('ESPN projection error:', err);
+    }
+  };
+
+  const fetchComparison = async () => {
+    try {
+      const response = await apiService.getProjectionComparison(playerId);
+      if (response.data.success) {
+        setComparison(response.data);
+      }
+    } catch (err) {
+      console.error('Projection comparison error:', err);
     }
   };
 
@@ -125,6 +137,9 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, week6Opponent, we
 
       // Fetch ESPN projection
       fetchESPNProjection();
+
+      // Fetch projection comparison
+      fetchComparison();
 
       // Auto-load prediction for Week 6 opponent (skip if bye week)
       if (week6Opponent && week6Opponent !== 'BYE') {
@@ -186,6 +201,12 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, week6Opponent, we
           onClick={() => setPredictionSource('espn')}
         >
           ESPN Projection
+        </button>
+        <button
+          className={`prediction-tab ${predictionSource === 'comparison' ? 'active' : ''}`}
+          onClick={() => setPredictionSource('comparison')}
+        >
+          Comparison
         </button>
       </div>
 
@@ -499,69 +520,69 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, week6Opponent, we
           <h4>ESPN Week {espnProjection.week} Projection</h4>
 
           <div className="espn-stats-container">
-            {/* QB Stats */}
-            {espnProjection.passing_yards !== null && espnProjection.passing_yards !== undefined && (
+            {/* QB Stats - Only show for QB */}
+            {playerPosition === 'QB' && espnProjection.passing_yards !== null && espnProjection.passing_yards !== undefined && (
               <div className="espn-stat-card">
                 <h5>Passing Stats</h5>
                 <div className="espn-stat-grid">
                   <div className="espn-stat-item">
                     <span className="espn-stat-label">Passing Yards</span>
-                    <span className="espn-stat-value">{espnProjection.passing_yards}</span>
+                    <span className="espn-stat-value">{espnProjection.passing_yards.toFixed(1)}</span>
                   </div>
-                  {espnProjection.passing_tds !== null && espnProjection.passing_tds !== undefined && (
+                  {espnProjection.passing_touchdowns !== null && espnProjection.passing_touchdowns !== undefined && (
                     <div className="espn-stat-item">
                       <span className="espn-stat-label">Passing TDs</span>
-                      <span className="espn-stat-value">{espnProjection.passing_tds}</span>
+                      <span className="espn-stat-value">{espnProjection.passing_touchdowns.toFixed(1)}</span>
                     </div>
                   )}
                   {espnProjection.interceptions !== null && espnProjection.interceptions !== undefined && (
                     <div className="espn-stat-item">
                       <span className="espn-stat-label">Interceptions</span>
-                      <span className="espn-stat-value">{espnProjection.interceptions}</span>
+                      <span className="espn-stat-value">{espnProjection.interceptions.toFixed(1)}</span>
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Rushing Stats */}
-            {(espnProjection.rushing_yards !== null && espnProjection.rushing_yards !== undefined && espnProjection.rushing_yards > 0) && (
+            {/* Rushing Stats - Show for QB and RB only (hide for WR/TE) */}
+            {(playerPosition === 'QB' || playerPosition === 'RB') &&
+             espnProjection.rushing_yards !== null &&
+             espnProjection.rushing_yards !== undefined &&
+             espnProjection.rushing_yards > 0 && (
               <div className="espn-stat-card">
                 <h5>Rushing Stats</h5>
                 <div className="espn-stat-grid">
                   <div className="espn-stat-item">
                     <span className="espn-stat-label">Rushing Yards</span>
-                    <span className="espn-stat-value">{espnProjection.rushing_yards}</span>
+                    <span className="espn-stat-value">{espnProjection.rushing_yards.toFixed(1)}</span>
                   </div>
-                  {espnProjection.rushing_tds !== null && espnProjection.rushing_tds !== undefined && (
+                  {playerPosition === 'RB' && espnProjection.rushing_touchdowns !== null && espnProjection.rushing_touchdowns !== undefined && (
                     <div className="espn-stat-item">
                       <span className="espn-stat-label">Rushing TDs</span>
-                      <span className="espn-stat-value">{espnProjection.rushing_tds}</span>
+                      <span className="espn-stat-value">{espnProjection.rushing_touchdowns.toFixed(1)}</span>
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Receiving Stats */}
-            {(espnProjection.receiving_yards !== null && espnProjection.receiving_yards !== undefined && espnProjection.receiving_yards > 0) && (
+            {/* Receiving Stats - Show for WR, TE, and RB (hide for QB) */}
+            {(playerPosition === 'WR' || playerPosition === 'TE' || playerPosition === 'RB') &&
+             espnProjection.receiving_yards !== null &&
+             espnProjection.receiving_yards !== undefined &&
+             espnProjection.receiving_yards > 0 && (
               <div className="espn-stat-card">
                 <h5>Receiving Stats</h5>
                 <div className="espn-stat-grid">
                   <div className="espn-stat-item">
                     <span className="espn-stat-label">Receptions</span>
-                    <span className="espn-stat-value">{espnProjection.receptions || 0}</span>
+                    <span className="espn-stat-value">{(espnProjection.receptions || 0).toFixed(1)}</span>
                   </div>
                   <div className="espn-stat-item">
                     <span className="espn-stat-label">Receiving Yards</span>
-                    <span className="espn-stat-value">{espnProjection.receiving_yards}</span>
+                    <span className="espn-stat-value">{espnProjection.receiving_yards.toFixed(1)}</span>
                   </div>
-                  {espnProjection.receiving_tds !== null && espnProjection.receiving_tds !== undefined && (
-                    <div className="espn-stat-item">
-                      <span className="espn-stat-label">Receiving TDs</span>
-                      <span className="espn-stat-value">{espnProjection.receiving_tds}</span>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -578,6 +599,155 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, week6Opponent, we
       {predictionSource === 'espn' && !espnProjection && (
         <div className="espn-no-data">
           <p>No ESPN projection data available for this player.</p>
+        </div>
+      )}
+
+      {/* Projection Comparison Tab */}
+      {predictionSource === 'comparison' && comparison && (
+        <div className="comparison-display">
+          <h4>Model vs ESPN - Week {comparison.week}</h4>
+          <p className="comparison-subtitle">Comparing season average vs ESPN projection</p>
+
+          <div className="comparison-stats-container">
+            {/* Position-specific stats */}
+            {playerPosition === 'QB' && (
+              <>
+                {/* Passing Stats */}
+                {(comparison.model_average.passing_yards > 0 || comparison.espn_projection.passing_yards > 0) && (
+                  <div className="comparison-stat-card">
+                    <h5>Passing Yards</h5>
+                    <div className="comparison-stat-row">
+                      <div className="stat-source">
+                        <span className="source-label">Model Avg</span>
+                        <span className="stat-value">{comparison.model_average.passing_yards}</span>
+                      </div>
+                      <div className="stat-variance" style={{ color: comparison.variance.passing_yards > 0 ? '#4ade80' : comparison.variance.passing_yards < 0 ? '#f87171' : '#94a3b8' }}>
+                        {comparison.variance.passing_yards > 0 ? '+' : ''}{comparison.variance.passing_yards}
+                      </div>
+                      <div className="stat-source">
+                        <span className="source-label">ESPN Proj</span>
+                        <span className="stat-value">{comparison.espn_projection.passing_yards}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {(comparison.model_average.passing_touchdowns > 0 || comparison.espn_projection.passing_touchdowns > 0) && (
+                  <div className="comparison-stat-card">
+                    <h5>Passing TDs</h5>
+                    <div className="comparison-stat-row">
+                      <div className="stat-source">
+                        <span className="source-label">Model Avg</span>
+                        <span className="stat-value">{comparison.model_average.passing_touchdowns}</span>
+                      </div>
+                      <div className="stat-variance" style={{ color: comparison.variance.passing_touchdowns > 0 ? '#4ade80' : comparison.variance.passing_touchdowns < 0 ? '#f87171' : '#94a3b8' }}>
+                        {comparison.variance.passing_touchdowns > 0 ? '+' : ''}{comparison.variance.passing_touchdowns}
+                      </div>
+                      <div className="stat-source">
+                        <span className="source-label">ESPN Proj</span>
+                        <span className="stat-value">{comparison.espn_projection.passing_touchdowns}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Rushing Stats - QB and RB */}
+            {(playerPosition === 'QB' || playerPosition === 'RB') && (comparison.model_average.rushing_yards > 0 || comparison.espn_projection.rushing_yards > 0) && (
+              <>
+                <div className="comparison-stat-card">
+                  <h5>Rushing Yards</h5>
+                  <div className="comparison-stat-row">
+                    <div className="stat-source">
+                      <span className="source-label">Model Avg</span>
+                      <span className="stat-value">{comparison.model_average.rushing_yards}</span>
+                    </div>
+                    <div className="stat-variance" style={{ color: comparison.variance.rushing_yards > 0 ? '#4ade80' : comparison.variance.rushing_yards < 0 ? '#f87171' : '#94a3b8' }}>
+                      {comparison.variance.rushing_yards > 0 ? '+' : ''}{comparison.variance.rushing_yards}
+                    </div>
+                    <div className="stat-source">
+                      <span className="source-label">ESPN Proj</span>
+                      <span className="stat-value">{comparison.espn_projection.rushing_yards}</span>
+                    </div>
+                  </div>
+                </div>
+                {playerPosition === 'RB' && (comparison.model_average.rushing_touchdowns > 0 || comparison.espn_projection.rushing_touchdowns > 0) && (
+                  <div className="comparison-stat-card">
+                    <h5>Rushing TDs</h5>
+                    <div className="comparison-stat-row">
+                      <div className="stat-source">
+                        <span className="source-label">Model Avg</span>
+                        <span className="stat-value">{comparison.model_average.rushing_touchdowns}</span>
+                      </div>
+                      <div className="stat-variance" style={{ color: comparison.variance.rushing_touchdowns > 0 ? '#4ade80' : comparison.variance.rushing_touchdowns < 0 ? '#f87171' : '#94a3b8' }}>
+                        {comparison.variance.rushing_touchdowns > 0 ? '+' : ''}{comparison.variance.rushing_touchdowns}
+                      </div>
+                      <div className="stat-source">
+                        <span className="source-label">ESPN Proj</span>
+                        <span className="stat-value">{comparison.espn_projection.rushing_touchdowns}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Receiving Stats - WR, TE, RB */}
+            {(playerPosition === 'WR' || playerPosition === 'TE' || playerPosition === 'RB') && (comparison.model_average.receiving_yards > 0 || comparison.espn_projection.receiving_yards > 0) && (
+              <>
+                <div className="comparison-stat-card">
+                  <h5>Receptions</h5>
+                  <div className="comparison-stat-row">
+                    <div className="stat-source">
+                      <span className="source-label">Model Avg</span>
+                      <span className="stat-value">{comparison.model_average.receptions}</span>
+                    </div>
+                    <div className="stat-variance" style={{ color: comparison.variance.receptions > 0 ? '#4ade80' : comparison.variance.receptions < 0 ? '#f87171' : '#94a3b8' }}>
+                      {comparison.variance.receptions > 0 ? '+' : ''}{comparison.variance.receptions}
+                    </div>
+                    <div className="stat-source">
+                      <span className="source-label">ESPN Proj</span>
+                      <span className="stat-value">{comparison.espn_projection.receptions}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="comparison-stat-card">
+                  <h5>Receiving Yards</h5>
+                  <div className="comparison-stat-row">
+                    <div className="stat-source">
+                      <span className="source-label">Model Avg</span>
+                      <span className="stat-value">{comparison.model_average.receiving_yards}</span>
+                    </div>
+                    <div className="stat-variance" style={{ color: comparison.variance.receiving_yards > 0 ? '#4ade80' : comparison.variance.receiving_yards < 0 ? '#f87171' : '#94a3b8' }}>
+                      {comparison.variance.receiving_yards > 0 ? '+' : ''}{comparison.variance.receiving_yards}
+                    </div>
+                    <div className="stat-source">
+                      <span className="source-label">ESPN Proj</span>
+                      <span className="stat-value">{comparison.espn_projection.receiving_yards}</span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="comparison-info">
+            <p className="info-text">
+              <strong>Model Average:</strong> Player's 2025 season average per game ({comparison.model_average.games_played} games)
+            </p>
+            <p className="info-text">
+              <strong>ESPN Projection:</strong> ESPN's Week {comparison.week} projection
+            </p>
+            <p className="info-text">
+              <strong>Variance:</strong> Difference between ESPN projection and model average (Green = ESPN higher, Red = ESPN lower)
+            </p>
+          </div>
+        </div>
+      )}
+
+      {predictionSource === 'comparison' && !comparison && (
+        <div className="comparison-no-data">
+          <p>No comparison data available for this player.</p>
         </div>
       )}
     </div>

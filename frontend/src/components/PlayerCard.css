@@ -5,6 +5,8 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
+  overflow: visible;
+  min-height: 150px;
 }
 
 .player-card:hover {
@@ -107,9 +109,16 @@
 }
 
 .player-stats {
-  display: flex;
+  display: flex !important;
   flex-direction: column;
   gap: 16px;
+  padding: 16px 0;
+  margin-top: 16px;
+  border-top: 2px solid rgba(255, 255, 255, 0.3);
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative;
+  z-index: 10;
 }
 
 .stat-group {
@@ -135,7 +144,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: white;
+  background: white !important;
   padding: 8px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -143,7 +152,7 @@
 
 .stat-label {
   font-size: 0.75rem;
-  color: #666;
+  color: #666 !important;
   text-transform: uppercase;
   font-weight: 600;
 }
@@ -151,7 +160,7 @@
 .stat-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #1a1a1a !important;
 }
 
 @media (max-width: 768px) {
