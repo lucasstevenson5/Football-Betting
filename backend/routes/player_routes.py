@@ -648,21 +648,25 @@ def get_all_espn_projections():
 @player_bp.route('/<int:player_id>/projection-comparison', methods=['GET'])
 def get_player_projection_comparison(player_id):
     """
-    Compare ESPN projection vs Model's season average for a single player
+    Compare ESPN projection vs Model's prediction for a single player
 
     Query params:
         - season: Season year (default: 2025)
         - week: Specific week (optional, defaults to current week + 1)
+        - opponent: Opponent team abbreviation (required for model prediction)
 
     Returns:
-        Comparison between ESPN projection and model's season average
+        Comparison between ESPN projection and model's prediction for specific opponent
     """
     try:
+        from services.prediction_service import prediction_service
+
         player = Player.query.get_or_404(player_id)
 
         # Get query parameters
         season = request.args.get('season', 2025, type=int)
         week = request.args.get('week', type=int)
+        opponent = request.args.get('opponent')
 
         # If no week specified, determine current week
         if week is None:
@@ -687,36 +691,61 @@ def get_player_projection_comparison(player_id):
                 'week': week
             }), 404
 
-        # Calculate player's season averages from 2025 stats
-        stats_query = db.session.query(
-            func.count(PlayerStats.id).label('games'),
-            func.avg(PlayerStats.passing_yards).label('avg_pass_yds'),
-            func.avg(PlayerStats.passing_touchdowns).label('avg_pass_td'),
-            func.avg(PlayerStats.rushing_yards).label('avg_rush_yds'),
-            func.avg(PlayerStats.rushing_touchdowns).label('avg_rush_td'),
-            func.avg(PlayerStats.receiving_yards).label('avg_rec_yds'),
-            func.avg(PlayerStats.receiving_touchdowns).label('avg_rec_td'),
-            func.avg(PlayerStats.receptions).label('avg_rec'),
-            func.avg(PlayerStats.targets).label('avg_targets')
-        ).filter(
-            PlayerStats.player_id == player.id,
-            PlayerStats.season == season,
-            PlayerStats.week.isnot(None)
-        ).first()
+        # Get model's prediction for this week against the opponent
+        if not opponent:
+            return jsonify({
+                'success': False,
+                'error': 'Opponent is required for model prediction comparison',
+                'player': player.to_dict(),
+                'week': week
+            }), 400
 
-        games_played = stats_query.games or 0
+        # Get model prediction using prediction service
+        model_prediction = prediction_service.get_player_prediction(player.id, opponent.upper())
 
-        # Build model averages (season average as baseline)
+        if not model_prediction:
+            return jsonify({
+                'success': False,
+                'error': 'Could not generate model prediction for this player and opponent',
+                'player': player.to_dict(),
+                'week': week
+            }), 404
+
+        # Get receptions prediction separately
+        receptions_prediction = None
+        try:
+            receptions_prediction = prediction_service.predict_receptions_probabilities(player.id, opponent.upper())
+        except Exception as e:
+            print(f"Could not get receptions prediction: {e}")
+
+        # Extract model predictions from nested structure
+        passing_preds = model_prediction.get('passing_predictions', {})
+        rushing_preds = model_prediction.get('rushing_predictions', {})
+        receiving_preds = model_prediction.get('receiving_predictions', {})
+        td_pred = model_prediction.get('touchdown_prediction', {})
+        passing_td_pred = model_prediction.get('passing_td_prediction', {})
+
+        # Get projected receptions from separate call
+        projected_receptions = 0
+        if receptions_prediction:
+            projected_receptions = receptions_prediction.get('projected_receptions', 0)
+
+        # Get TD predictions
+        # For QBs: passing_td_prediction.avg_tds_per_game
+        # For RB/WR/TE: touchdown_prediction.avg_tds_per_game
+        passing_tds = float(passing_td_pred.get('avg_tds_per_game', 0))
+        rushing_receiving_tds = float(td_pred.get('avg_tds_per_game', 0))
+
         model_avg = {
-            'passing_yards': round(float(stats_query.avg_pass_yds or 0), 1),
-            'passing_touchdowns': round(float(stats_query.avg_pass_td or 0), 1),
-            'rushing_yards': round(float(stats_query.avg_rush_yds or 0), 1),
-            'rushing_touchdowns': round(float(stats_query.avg_rush_td or 0), 1),
-            'receiving_yards': round(float(stats_query.avg_rec_yds or 0), 1),
-            'receiving_touchdowns': round(float(stats_query.avg_rec_td or 0), 1),
-            'receptions': round(float(stats_query.avg_rec or 0), 1),
-            'targets': round(float(stats_query.avg_targets or 0), 1),
-            'games_played': games_played
+            'passing_yards': round(float(passing_preds.get('projected_yards', 0)), 1),
+            'passing_touchdowns': round(passing_tds, 1),
+            'rushing_yards': round(float(rushing_preds.get('projected_yards', 0)), 1),
+            'rushing_touchdowns': round(rushing_receiving_tds, 1),
+            'receiving_yards': round(float(receiving_preds.get('projected_yards', 0)), 1),
+            'receiving_touchdowns': round(rushing_receiving_tds, 1),
+            'receptions': round(float(projected_receptions), 1),
+            'targets': 0,  # Targets not in current prediction structure
+            'opponent': opponent.upper()
         }
 
         # ESPN projections (convert to float)

@@ -80,7 +80,13 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, w
 
   const fetchComparison = async () => {
     try {
-      const response = await apiService.getProjectionComparison(playerId);
+      // Use the opponent from state, or fallback to week6Opponent
+      const opponentToUse = opponent || week6Opponent;
+      if (!opponentToUse) {
+        console.error('No opponent available for comparison');
+        return;
+      }
+      const response = await apiService.getProjectionComparison(playerId, { opponent: opponentToUse });
       if (response.data.success) {
         setComparison(response.data);
       }
@@ -153,6 +159,13 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, w
 
     fetchData();
   }, [playerId, week6Opponent]);
+
+  // Refetch comparison when opponent changes
+  useEffect(() => {
+    if (opponent) {
+      fetchComparison();
+    }
+  }, [opponent]);
 
   // Filter out player's own team
   const availableOpponents = NFL_TEAMS.filter(team => team.abbr !== playerTeam);
@@ -277,33 +290,34 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, w
             </div>
           )}
 
-          {/* Receiving Predictions (for non-QBs) */}
-          {prediction.receiving_predictions && !prediction.passing_predictions && (
+          {/* Rushing Predictions */}
+          {prediction.rushing_predictions && prediction.rushing_predictions.player_avg > 0 && (
             <div className="prediction-card yardage-predictions">
-              <h4>Receiving Yards Probabilities</h4>
+              <h4>Rushing Yards Probabilities</h4>
 
               <div className="projection-summary">
                 <div className="projection-item">
                   <span className="label">Projected:</span>
-                  <span className="value">{prediction.receiving_predictions.projected_yards} yds</span>
+                  <span className="value">{prediction.rushing_predictions.projected_yards} yds</span>
                 </div>
                 <div className="projection-item">
                   <span className="label">Player Avg:</span>
-                  <span className="value">{prediction.receiving_predictions.player_avg} yds</span>
+                  <span className="value">{prediction.rushing_predictions.player_avg} yds</span>
                 </div>
-                {prediction.receiving_predictions.opponent_avg_allowed && (
+                {prediction.rushing_predictions.opponent_avg_allowed && (
                   <div className="projection-item">
                     <span className="label">Opp Allows:</span>
-                    <span className="value">{prediction.receiving_predictions.opponent_avg_allowed} yds/g</span>
+                    <span className="value">{prediction.rushing_predictions.opponent_avg_allowed} yds/g</span>
                   </div>
                 )}
               </div>
 
               <div className="probability-grid">
-                {Object.entries(prediction.receiving_predictions.probabilities)
+                {Object.entries(prediction.rushing_predictions.probabilities)
                   .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                  .filter(([_, prob]) => prob > 0.1) // Only show meaningful probabilities
                   .map(([yards, prob]) => {
-                    const hitRate = getHitRate('receiving_yards', parseInt(yards));
+                    const hitRate = getHitRate('rushing_yards', parseInt(yards));
                     return (
                       <div key={yards} className="probability-item">
                         <div className="probability-label">{yards}+ yds</div>
@@ -333,34 +347,33 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, w
             </div>
           )}
 
-          {/* Rushing Predictions */}
-          {prediction.rushing_predictions && prediction.rushing_predictions.player_avg > 0 && (
+          {/* Receiving Predictions (for non-QBs) */}
+          {prediction.receiving_predictions && !prediction.passing_predictions && (
             <div className="prediction-card yardage-predictions">
-              <h4>Rushing Yards Probabilities</h4>
+              <h4>Receiving Yards Probabilities</h4>
 
               <div className="projection-summary">
                 <div className="projection-item">
                   <span className="label">Projected:</span>
-                  <span className="value">{prediction.rushing_predictions.projected_yards} yds</span>
+                  <span className="value">{prediction.receiving_predictions.projected_yards} yds</span>
                 </div>
                 <div className="projection-item">
                   <span className="label">Player Avg:</span>
-                  <span className="value">{prediction.rushing_predictions.player_avg} yds</span>
+                  <span className="value">{prediction.receiving_predictions.player_avg} yds</span>
                 </div>
-                {prediction.rushing_predictions.opponent_avg_allowed && (
+                {prediction.receiving_predictions.opponent_avg_allowed && (
                   <div className="projection-item">
                     <span className="label">Opp Allows:</span>
-                    <span className="value">{prediction.rushing_predictions.opponent_avg_allowed} yds/g</span>
+                    <span className="value">{prediction.receiving_predictions.opponent_avg_allowed} yds/g</span>
                   </div>
                 )}
               </div>
 
               <div className="probability-grid">
-                {Object.entries(prediction.rushing_predictions.probabilities)
+                {Object.entries(prediction.receiving_predictions.probabilities)
                   .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-                  .filter(([_, prob]) => prob > 0.1) // Only show meaningful probabilities
                   .map(([yards, prob]) => {
-                    const hitRate = getHitRate('rushing_yards', parseInt(yards));
+                    const hitRate = getHitRate('receiving_yards', parseInt(yards));
                     return (
                       <div key={yards} className="probability-item">
                         <div className="probability-label">{yards}+ yds</div>
@@ -557,9 +570,9 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, w
                     <span className="espn-stat-label">Rushing Yards</span>
                     <span className="espn-stat-value">{espnProjection.rushing_yards.toFixed(1)}</span>
                   </div>
-                  {playerPosition === 'RB' && espnProjection.rushing_touchdowns !== null && espnProjection.rushing_touchdowns !== undefined && (
+                  {(playerPosition === 'RB' || playerPosition === 'WR' || playerPosition === 'TE') && espnProjection.rushing_touchdowns !== null && espnProjection.rushing_touchdowns !== undefined && (
                     <div className="espn-stat-item">
-                      <span className="espn-stat-label">Rushing TDs</span>
+                      <span className="espn-stat-label">Total TDs</span>
                       <span className="espn-stat-value">{espnProjection.rushing_touchdowns.toFixed(1)}</span>
                     </div>
                   )}
@@ -671,9 +684,9 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, w
                     </div>
                   </div>
                 </div>
-                {playerPosition === 'RB' && (comparison.model_average.rushing_touchdowns > 0 || comparison.espn_projection.rushing_touchdowns > 0) && (
+                {(playerPosition === 'RB' || playerPosition === 'WR' || playerPosition === 'TE') && (comparison.model_average.rushing_touchdowns > 0 || comparison.espn_projection.rushing_touchdowns > 0) && (
                   <div className="comparison-stat-card">
-                    <h5>Rushing TDs</h5>
+                    <h5>Total TDs</h5>
                     <div className="comparison-stat-row">
                       <div className="stat-source">
                         <span className="source-label">Model Avg</span>
@@ -733,7 +746,7 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, w
 
           <div className="comparison-info">
             <p className="info-text">
-              <strong>Model Average:</strong> Player's 2025 season average per game ({comparison.model_average.games_played} games)
+              <strong>Model Prediction:</strong> Our model's prediction vs {comparison.model_average.opponent}
             </p>
             <p className="info-text">
               <strong>ESPN Projection:</strong> ESPN's Week {comparison.week} projection

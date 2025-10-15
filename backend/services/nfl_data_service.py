@@ -72,14 +72,14 @@ class NFLDataService:
     @staticmethod
     def fetch_team_stats(seasons):
         """
-        Fetch team defensive statistics for given seasons
-        Uses schedules for points allowed and PBP for yards allowed
+        Fetch team offensive and defensive statistics for given seasons
+        Uses schedules for points and PBP for yards
 
         Args:
             seasons: List of years to fetch data for
 
         Returns:
-            DataFrame with team defensive statistics
+            DataFrame with team offensive and defensive statistics
         """
         all_schedules = []
         all_pbp = []
@@ -112,22 +112,56 @@ class NFLDataService:
         teams = pd.concat([schedules['home_team'], schedules['away_team']]).unique()
 
         for team in teams:
-            # Calculate points allowed from schedules
-            # When team is home, they allowed away_score
+            # OFFENSIVE STATS (points/yards scored by the team)
+            # When team is home, they scored home_score
             home_games = schedules[schedules['home_team'] == team][
+                ['season', 'week', 'away_team', 'home_score']
+            ].rename(columns={'away_team': 'opponent', 'home_score': 'points_scored'})
+
+            # When team is away, they scored away_score
+            away_games = schedules[schedules['away_team'] == team][
+                ['season', 'week', 'home_team', 'away_score']
+            ].rename(columns={'home_team': 'opponent', 'away_score': 'points_scored'})
+
+            points_scored = pd.concat([home_games, away_games])
+            points_scored['team'] = team
+
+            # DEFENSIVE STATS (points allowed to opponent)
+            # When team is home, they allowed away_score
+            home_games_def = schedules[schedules['home_team'] == team][
                 ['season', 'week', 'away_team', 'away_score']
             ].rename(columns={'away_team': 'opponent', 'away_score': 'points_allowed'})
 
             # When team is away, they allowed home_score
-            away_games = schedules[schedules['away_team'] == team][
+            away_games_def = schedules[schedules['away_team'] == team][
                 ['season', 'week', 'home_team', 'home_score']
             ].rename(columns={'home_team': 'opponent', 'home_score': 'points_allowed'})
 
-            points_allowed = pd.concat([home_games, away_games])
+            points_allowed = pd.concat([home_games_def, away_games_def])
             points_allowed['team'] = team
 
-            # Calculate yards allowed from PBP (when team is on defense)
+            # Merge offensive and defensive points
+            points_combined = pd.merge(
+                points_scored,
+                points_allowed,
+                on=['season', 'week', 'opponent', 'team'],
+                how='outer'
+            )
+
+            # Calculate yards from PBP
             if not pbp.empty:
+                # Offensive yards (when team is on offense)
+                yards_gained = pbp[pbp['posteam'] == team].groupby(['season', 'week', 'defteam']).agg({
+                    'yards_gained': 'sum',
+                    'passing_yards': 'sum',
+                    'rushing_yards': 'sum'
+                }).reset_index()
+
+                yards_gained.columns = ['season', 'week', 'opponent', 'total_yards',
+                                       'passing_yards', 'rushing_yards']
+                yards_gained['team'] = team
+
+                # Defensive yards allowed (when team is on defense)
                 yards_allowed = pbp[pbp['defteam'] == team].groupby(['season', 'week', 'posteam']).agg({
                     'yards_gained': 'sum',
                     'passing_yards': 'sum',
@@ -138,23 +172,29 @@ class NFLDataService:
                                         'passing_yards_allowed', 'rushing_yards_allowed']
                 yards_allowed['team'] = team
 
-                # Merge points and yards
+                # Merge all stats
                 team_stats = pd.merge(
-                    points_allowed,
+                    points_combined,
+                    yards_gained,
+                    on=['season', 'week', 'opponent', 'team'],
+                    how='outer'
+                )
+                team_stats = pd.merge(
+                    team_stats,
                     yards_allowed,
                     on=['season', 'week', 'opponent', 'team'],
                     how='outer'
                 )
             else:
                 # No PBP data available, use points only
-                team_stats = points_allowed
+                team_stats = points_combined
 
             all_team_stats.append(team_stats)
 
         # Combine all teams
         combined_stats = pd.concat(all_team_stats, ignore_index=True)
 
-        print(f"Fetched defensive stats for {len(teams)} teams, {len(combined_stats)} total records")
+        print(f"Fetched offensive and defensive stats for {len(teams)} teams, {len(combined_stats)} total records")
         return combined_stats
 
     @staticmethod
@@ -311,10 +351,10 @@ class NFLDataService:
     @staticmethod
     def import_team_stats_to_db(team_stats_df):
         """
-        Import team defensive statistics to database
+        Import team offensive and defensive statistics to database
 
         Args:
-            team_stats_df: DataFrame containing team defensive stats
+            team_stats_df: DataFrame containing team offensive and defensive stats
         """
         try:
             imported_count = 0
@@ -337,7 +377,11 @@ class NFLDataService:
                 ).first()
 
                 if existing_stat:
-                    # Update existing stats
+                    # Update existing stats (both offensive and defensive)
+                    existing_stat.points_scored = row.get('points_scored', 0) or 0
+                    existing_stat.total_yards = row.get('total_yards', 0) or 0
+                    existing_stat.passing_yards = row.get('passing_yards', 0) or 0
+                    existing_stat.rushing_yards = row.get('rushing_yards', 0) or 0
                     existing_stat.points_against = row.get('points_allowed', 0) or 0
                     existing_stat.yards_against = row.get('yards_allowed', 0) or 0
                     existing_stat.passing_yards_against = row.get('passing_yards_allowed', 0) or 0
@@ -349,6 +393,10 @@ class NFLDataService:
                         team_id=team.id,
                         season=int(row['season']),
                         week=int(row['week']) if pd.notna(row['week']) else None,
+                        points_scored=row.get('points_scored', 0) or 0,
+                        total_yards=row.get('total_yards', 0) or 0,
+                        passing_yards=row.get('passing_yards', 0) or 0,
+                        rushing_yards=row.get('rushing_yards', 0) or 0,
                         points_against=row.get('points_allowed', 0) or 0,
                         yards_against=row.get('yards_allowed', 0) or 0,
                         passing_yards_against=row.get('passing_yards_allowed', 0) or 0,

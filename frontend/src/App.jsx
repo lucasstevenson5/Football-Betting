@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PlayerList from './components/PlayerList';
 import ParlayBuilder from './components/ParlayBuilder';
 import TrendingPlayers from './components/TrendingPlayers';
+import FantasyProjections from './components/FantasyProjections';
 import './App.css';
 
 function App() {
@@ -33,6 +34,12 @@ function App() {
             Trending Players
           </button>
           <button
+            className={`app-tab ${activeTab === 'fantasy' ? 'active' : ''}`}
+            onClick={() => setActiveTab('fantasy')}
+          >
+            Fantasy Projections
+          </button>
+          <button
             className={`app-tab ${activeTab === 'parlays' ? 'active' : ''}`}
             onClick={() => setActiveTab('parlays')}
           >
@@ -45,6 +52,7 @@ function App() {
       <div className="app-content">
         {activeTab === 'players' && <PlayerList />}
         {activeTab === 'trending' && <TrendingPlayers />}
+        {activeTab === 'fantasy' && <FantasyProjections />}
         {activeTab === 'parlays' && <ParlayBuilder />}
       </div>
     </div>

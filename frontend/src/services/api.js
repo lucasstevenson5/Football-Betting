@@ -59,6 +59,10 @@ export const apiService = {
     api.get('/trending/upward-trajectory'),
   getAllTrending: () =>
     api.get('/trending/all'),
+
+  // Fantasy Projections
+  getFantasyProjections: (params = {}) =>
+    api.get('/fantasy/projections', { params }),
 };
 
 export default api;

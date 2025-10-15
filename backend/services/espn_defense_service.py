@@ -241,6 +241,79 @@ class ESPNDefenseService:
         weeks = list(range(1, current_week + 1))
         return ESPNDefenseService.calculate_defensive_stats(season=season, weeks=weeks)
 
+    @staticmethod
+    def fetch_team_stats(season=2025, weeks=None):
+        """
+        Fetch both offensive and defensive team statistics from ESPN
+
+        Args:
+            season: NFL season year
+            weeks: List of week numbers (default: weeks 1-current)
+
+        Returns:
+            DataFrame with both offensive and defensive statistics per team per week
+        """
+        if weeks is None:
+            current_week = ESPNDefenseService.get_current_week()
+            weeks = list(range(1, current_week + 1))
+
+        all_team_stats = []
+
+        for week in weeks:
+            print(f"Fetching week {week}...")
+            games = ESPNDefenseService.fetch_week_scores(season=season, week=week)
+
+            for game in games:
+                game_id = game.get('game_id')
+
+                # Fetch boxscore for yards data
+                boxscore_stats = ESPNDefenseService.fetch_game_boxscore(game_id) if game_id else {}
+
+                # Get offensive stats for each team
+                home_offensive = boxscore_stats.get(game['home_team'], {})
+                away_offensive = boxscore_stats.get(game['away_team'], {})
+
+                # Home team stats (offense + defense)
+                home_stats = {
+                    'season': game['season'],
+                    'week': game['week'],
+                    'team': game['home_team'],
+                    'opponent': game['away_team'],
+                    # Offensive stats (what home team scored/gained)
+                    'points_scored': game['home_score'],
+                    'total_yards': home_offensive.get('total_yards', None),
+                    'passing_yards': home_offensive.get('passing_yards', None),
+                    'rushing_yards': home_offensive.get('rushing_yards', None),
+                    # Defensive stats (what home team allowed)
+                    'points_allowed': game['away_score'],
+                    'yards_allowed': away_offensive.get('total_yards', None),
+                    'passing_yards_allowed': away_offensive.get('passing_yards', None),
+                    'rushing_yards_allowed': away_offensive.get('rushing_yards', None)
+                }
+
+                # Away team stats (offense + defense)
+                away_stats = {
+                    'season': game['season'],
+                    'week': game['week'],
+                    'team': game['away_team'],
+                    'opponent': game['home_team'],
+                    # Offensive stats (what away team scored/gained)
+                    'points_scored': game['away_score'],
+                    'total_yards': away_offensive.get('total_yards', None),
+                    'passing_yards': away_offensive.get('passing_yards', None),
+                    'rushing_yards': away_offensive.get('rushing_yards', None),
+                    # Defensive stats (what away team allowed)
+                    'points_allowed': game['home_score'],
+                    'yards_allowed': home_offensive.get('total_yards', None),
+                    'passing_yards_allowed': home_offensive.get('passing_yards', None),
+                    'rushing_yards_allowed': home_offensive.get('rushing_yards', None)
+                }
+
+                all_team_stats.append(home_stats)
+                all_team_stats.append(away_stats)
+
+        return pd.DataFrame(all_team_stats)
+
 
 # Example usage
 if __name__ == '__main__':

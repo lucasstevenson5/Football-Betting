@@ -39,6 +39,12 @@ class TeamStats(db.Model):
     season = db.Column(db.Integer, nullable=False, index=True)
     week = db.Column(db.Integer, nullable=True)  # NULL for season totals
 
+    # Offensive stats (team performance)
+    points_scored = db.Column(db.Integer, default=0)
+    total_yards = db.Column(db.Integer, default=0)
+    passing_yards = db.Column(db.Integer, default=0)
+    rushing_yards = db.Column(db.Integer, default=0)
+
     # Defensive stats (points/yards allowed)
     points_against = db.Column(db.Integer, default=0)
     yards_against = db.Column(db.Integer, default=0)
@@ -70,6 +76,10 @@ class TeamStats(db.Model):
             'team_id': self.team_id,
             'season': self.season,
             'week': self.week,
+            'points_scored': self.points_scored,
+            'total_yards': self.total_yards,
+            'passing_yards': self.passing_yards,
+            'rushing_yards': self.rushing_yards,
             'points_against': self.points_against,
             'yards_against': self.yards_against,
             'passing_yards_against': self.passing_yards_against,

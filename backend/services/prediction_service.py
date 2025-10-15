@@ -35,7 +35,7 @@ class PredictionService:
 
     def get_team_offensive_stats(self, team_abbr, season=2025):
         """
-        Calculate team's offensive stats by aggregating player stats
+        Get team's offensive stats from TeamStats table (actual team-level data)
         Returns season averages for passing yards, rushing yards, and offensive split percentages
 
         Args:
@@ -50,32 +50,26 @@ class PredictionService:
                 - rush_rate: Percentage of offense that is rushing (0-1)
                 - total_games: Number of games played
         """
-        # Get all players on this team
-        players = Player.query.filter_by(team=team_abbr).all()
+        from models.team import Team, TeamStats
 
-        if not players:
+        # Get team
+        team = Team.query.filter_by(team_abbr=team_abbr).first()
+        if not team:
             return None
 
-        # Get all player stats for this season, grouped by week
-        player_ids = [p.id for p in players]
+        # Get team stats for this season
+        team_stats = TeamStats.query.filter(
+            TeamStats.team_id == team.id,
+            TeamStats.season == season,
+            TeamStats.week.isnot(None)
+        ).all()
 
-        # Query to get stats per week
-        stats_by_week = db.session.query(
-            PlayerStats.week,
-            func.sum(PlayerStats.passing_yards).label('team_passing'),
-            func.sum(PlayerStats.rushing_yards).label('team_rushing')
-        ).filter(
-            PlayerStats.player_id.in_(player_ids),
-            PlayerStats.season == season,
-            PlayerStats.week.isnot(None)
-        ).group_by(PlayerStats.week).all()
-
-        if not stats_by_week:
+        if not team_stats:
             return None
 
-        # Calculate averages
-        passing_yards = [w.team_passing or 0 for w in stats_by_week]
-        rushing_yards = [w.team_rushing or 0 for w in stats_by_week]
+        # Calculate averages from actual team stats
+        passing_yards = [ts.passing_yards or 0 for ts in team_stats]
+        rushing_yards = [ts.rushing_yards or 0 for ts in team_stats]
 
         avg_passing = np.mean(passing_yards)
         avg_rushing = np.mean(rushing_yards)
@@ -86,7 +80,7 @@ class PredictionService:
             'avg_rushing_yards': round(avg_rushing, 1),
             'pass_rate': round(avg_passing / total_offense, 3) if total_offense > 0 else 0.5,
             'rush_rate': round(avg_rushing / total_offense, 3) if total_offense > 0 else 0.5,
-            'total_games': len(stats_by_week)
+            'total_games': len(team_stats)
         }
 
     def get_league_average_splits(self, season=2025):
@@ -151,6 +145,11 @@ class PredictionService:
         yard_shares = []
         games_data = []
 
+        from models.team import Team, TeamStats
+
+        # Get team
+        team = Team.query.filter_by(team_abbr=player.team).first()
+
         for stat in player_stats:
             # Get player's yards for this game
             if stat_type == 'receiving_yards':
@@ -158,23 +157,23 @@ class PredictionService:
             else:  # rushing_yards
                 player_yards = stat.rushing_yards or 0
 
-            # Get team's total yards for this game/week
-            if stat_type == 'receiving_yards':
-                team_total = db.session.query(
-                    func.sum(PlayerStats.receiving_yards)
-                ).filter(
-                    PlayerStats.player_id.in_(team_player_ids),
-                    PlayerStats.season == stat.season,
-                    PlayerStats.week == stat.week
-                ).scalar() or 0
-            else:  # rushing_yards
-                team_total = db.session.query(
-                    func.sum(PlayerStats.rushing_yards)
-                ).filter(
-                    PlayerStats.player_id.in_(team_player_ids),
-                    PlayerStats.season == stat.season,
-                    PlayerStats.week == stat.week
-                ).scalar() or 0
+            # Get team's total yards for this game/week from TeamStats
+            if team:
+                team_stat = TeamStats.query.filter(
+                    TeamStats.team_id == team.id,
+                    TeamStats.season == stat.season,
+                    TeamStats.week == stat.week
+                ).first()
+
+                if team_stat:
+                    if stat_type == 'receiving_yards':
+                        team_total = team_stat.passing_yards or 0
+                    else:  # rushing_yards
+                        team_total = team_stat.rushing_yards or 0
+                else:
+                    team_total = 0
+            else:
+                team_total = 0
 
             # Calculate share
             if team_total > 0:
@@ -458,21 +457,30 @@ class PredictionService:
                 league_avg_rate = league_splits['rush_rate']
                 league_avg_yards = 120  # League average rushing yards allowed
 
-            # Calculate offensive tendency multiplier
-            # If team passes more than league average, scale up passing yards allowed by defense
-            tendency_multiplier = team_rate / league_avg_rate if league_avg_rate > 0 else 1.0
+            # Data quality check: If team stats are extreme (< 20% or > 80%), likely data issue
+            # Fall back to simpler model without tendency multiplier
+            if team_rate < 0.20 or team_rate > 0.80:
+                # Use simpler defensive factor model when team data seems unreliable
+                defensive_factor = def_mean / league_avg_yards if league_avg_yards > 0 else 1.0
+                adjusted_mean = player_mean * defensive_factor
+            else:
+                # Calculate offensive tendency multiplier
+                # If team passes more than league average, scale up passing yards allowed by defense
+                tendency_multiplier = team_rate / league_avg_rate if league_avg_rate > 0 else 1.0
+                # Cap the multiplier to reasonable bounds (0.5x to 1.5x)
+                tendency_multiplier = max(0.5, min(1.5, tendency_multiplier))
 
-            # Adjust defensive yards allowed based on offensive tendency
-            adjusted_def_yards = def_mean * tendency_multiplier
+                # Adjust defensive yards allowed based on offensive tendency
+                adjusted_def_yards = def_mean * tendency_multiplier
 
-            # Project team's total yards against this defense
-            projected_team_yards = adjusted_def_yards
+                # Project team's total yards against this defense
+                projected_team_yards = adjusted_def_yards
 
-            # Apply player's yard share to get individual projection
-            adjusted_mean = projected_team_yards * player_yard_share if player_yard_share > 0 else player_mean
+                # Apply player's yard share to get individual projection
+                adjusted_mean = projected_team_yards * player_yard_share if player_yard_share > 0 else player_mean
 
-            # Blend with player's historical average (70% new model, 30% historical)
-            adjusted_mean = (adjusted_mean * 0.7) + (player_mean * 0.3)
+                # Blend with player's historical average (70% new model, 30% historical)
+                adjusted_mean = (adjusted_mean * 0.7) + (player_mean * 0.3)
         else:
             # Fall back to simpler model if team data unavailable
             if def_mean is not None:
@@ -609,18 +617,27 @@ class PredictionService:
             team_pass_rate = team_offense['pass_rate']
             league_avg_pass_rate = league_splits['pass_rate']
 
-            # Calculate offensive tendency multiplier
-            # Pass-heavy teams will throw more even against good pass defenses
-            tendency_multiplier = team_pass_rate / league_avg_pass_rate if league_avg_pass_rate > 0 else 1.0
+            # Data quality check: If team stats are extreme (< 20% or > 80%), likely data issue
+            if team_pass_rate < 0.20 or team_pass_rate > 0.80:
+                # Use simpler defensive factor model when team data seems unreliable
+                league_avg = 220
+                defensive_factor = def_mean / league_avg if league_avg > 0 else 1.0
+                adjusted_mean = player_mean * defensive_factor
+            else:
+                # Calculate offensive tendency multiplier
+                # Pass-heavy teams will throw more even against good pass defenses
+                tendency_multiplier = team_pass_rate / league_avg_pass_rate if league_avg_pass_rate > 0 else 1.0
+                # Cap the multiplier to reasonable bounds (0.5x to 1.5x)
+                tendency_multiplier = max(0.5, min(1.5, tendency_multiplier))
 
-            # Adjust defensive passing yards allowed based on offensive tendency
-            adjusted_def_yards = def_mean * tendency_multiplier
+                # Adjust defensive passing yards allowed based on offensive tendency
+                adjusted_def_yards = def_mean * tendency_multiplier
 
-            # QB gets ~100% of team passing yards (not accounting for sacks/scrambles which are rushing yards)
-            adjusted_mean = adjusted_def_yards
+                # QB gets ~100% of team passing yards (not accounting for sacks/scrambles which are rushing yards)
+                adjusted_mean = adjusted_def_yards
 
-            # Blend with player's historical average (70% new model, 30% historical)
-            adjusted_mean = (adjusted_mean * 0.7) + (player_mean * 0.3)
+                # Blend with player's historical average (70% new model, 30% historical)
+                adjusted_mean = (adjusted_mean * 0.7) + (player_mean * 0.3)
         else:
             # Fall back to simpler model if team data unavailable
             if def_mean is not None:
