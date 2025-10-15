@@ -9,6 +9,7 @@ and scoring touchdowns based on:
 """
 
 import numpy as np
+import math
 from datetime import datetime
 from models import db
 from models.player import Player, PlayerStats
@@ -716,7 +717,7 @@ class PredictionService:
         for threshold in [1, 2, 3, 4]:
             # P(X >= threshold) = 1 - P(X < threshold) = 1 - sum(P(X=k) for k=0 to threshold-1)
             prob_less_than = sum(
-                (adjusted_td_avg ** k) * np.exp(-adjusted_td_avg) / np.math.factorial(k)
+                (adjusted_td_avg ** k) * np.exp(-adjusted_td_avg) / math.factorial(k)
                 for k in range(threshold)
             )
             prob_at_least = 1 - prob_less_than
