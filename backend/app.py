@@ -42,25 +42,29 @@ def create_app():
         # Run migration to add missing columns if needed
         try:
             from sqlalchemy import text
-            with db.engine.connect() as conn:
-                # Check if columns exist and add them if missing
-                columns_to_add = [
-                    ('points_scored', 'INTEGER DEFAULT 0'),
-                    ('total_yards', 'INTEGER DEFAULT 0'),
-                    ('passing_yards', 'INTEGER DEFAULT 0'),
-                    ('rushing_yards', 'INTEGER DEFAULT 0')
-                ]
+            columns_to_add = [
+                ('points_scored', 'INTEGER DEFAULT 0'),
+                ('total_yards', 'INTEGER DEFAULT 0'),
+                ('passing_yards', 'INTEGER DEFAULT 0'),
+                ('rushing_yards', 'INTEGER DEFAULT 0')
+            ]
 
-                for column_name, column_def in columns_to_add:
-                    try:
+            for column_name, column_def in columns_to_add:
+                # Use separate connection for each column check to avoid transaction issues
+                try:
+                    with db.engine.connect() as conn:
                         conn.execute(text(f"SELECT {column_name} FROM team_stats LIMIT 1"))
-                    except Exception:
-                        print(f"Adding missing column: {column_name}")
-                        conn.execute(text(f"ALTER TABLE team_stats ADD COLUMN {column_name} {column_def}"))
-                        conn.commit()
-                        print(f"✓ Column {column_name} added")
+                except Exception:
+                    # Column doesn't exist, add it in a new transaction
+                    try:
+                        with db.engine.begin() as conn:
+                            print(f"Adding missing column: {column_name}")
+                            conn.execute(text(f"ALTER TABLE team_stats ADD COLUMN {column_name} {column_def}"))
+                            print(f"✓ Column {column_name} added")
+                    except Exception as alter_error:
+                        print(f"Could not add column {column_name}: {alter_error}")
         except Exception as e:
-            print(f"Migration check: {e}")
+            print(f"Migration check error: {e}")
 
     # Health check route
     @app.route('/api/health', methods=['GET'])
