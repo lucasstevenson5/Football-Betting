@@ -322,18 +322,18 @@ def get_all_trending():
         if trend_result:
             upward_trajectory_players.append(trend_result)
 
-    # Sort both by percentage increase
+    # Sort both by percentage increase and limit to top 10
     beat_average_players.sort(key=lambda x: x['percentage_increase'], reverse=True)
     upward_trajectory_players.sort(key=lambda x: x['percentage_increase'], reverse=True)
 
     return jsonify({
         'success': True,
         'beat_average': {
-            'players': beat_average_players,
+            'players': beat_average_players[:10],  # Limit to top 10
             'count': len(beat_average_players)
         },
         'upward_trajectory': {
-            'players': upward_trajectory_players,
+            'players': upward_trajectory_players[:10],  # Limit to top 10
             'count': len(upward_trajectory_players)
         }
     })

@@ -370,7 +370,7 @@ def get_current_season_players():
     try:
         # Get query parameters
         position = request.args.get('position')
-        limit = request.args.get('limit', 50, type=int)
+        limit = request.args.get('limit', 10, type=int)  # Reduced to 10 for performance
         sort_by = request.args.get('sort_by', 'receiving_yards')
         requested_season = request.args.get('season', type=int)
 

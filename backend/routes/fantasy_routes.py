@@ -78,7 +78,7 @@ def get_fantasy_projections():
         # Get query parameters
         season = request.args.get('season', 2025, type=int)
         position = request.args.get('position')
-        limit = request.args.get('limit', 30, type=int)  # Reduced default to avoid timeout
+        limit = request.args.get('limit', 10, type=int)  # Reduced to 10 for performance
 
         # Determine which week to show projections for
         # Default to next week (current week + 1)
