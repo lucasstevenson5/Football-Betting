@@ -28,7 +28,7 @@ class PredictionService:
     QB_PASSING_BENCHMARKS = [200, 225, 250, 275, 300, 325, 350, 375, 400]
 
     # Time decay factors (more recent = higher weight)
-    CURRENT_SEASON_WEIGHT = 2.0  # Current season weighted 2x higher
+    CURRENT_SEASON_WEIGHT = 3.5  # Current season weighted 3.5x higher (increased from 2.0 to give recent performance more influence)
     WEEK_DECAY_FACTOR = 0.95  # Each week back reduces weight by 5%
 
     def __init__(self):
@@ -111,14 +111,16 @@ class PredictionService:
             'rush_rate': round(np.mean(rush_rates), 3)
         }
 
-    def get_player_yard_share(self, player_id, stat_type='receiving_yards', limit=20):
+    def get_player_yard_share(self, player_id, stat_type='receiving_yards', limit=20, current_season_only=False):
         """
         Calculate player's share of team's total yards with time weighting
+        Filters out DNP games to get accurate current-season share
 
         Args:
             player_id: Player database ID
             stat_type: 'receiving_yards' or 'rushing_yards'
             limit: Number of recent games to analyze
+            current_season_only: If True, only use current season games (for players with 3+ games)
 
         Returns:
             Weighted average of player's yard share (0-1)
@@ -127,21 +129,25 @@ class PredictionService:
         if not player:
             return 0.0
 
-        # Get player's recent games
-        player_stats = PlayerStats.query.filter(
+        # Build query for player's recent games
+        query = PlayerStats.query.filter(
             PlayerStats.player_id == player_id,
             PlayerStats.week.isnot(None)
-        ).order_by(
+        )
+
+        # If current_season_only is True, filter to current season
+        if current_season_only:
+            current_season = 2025
+            query = query.filter(PlayerStats.season == current_season)
+
+        # Get player's recent games (fetch more to account for DNP filtering)
+        player_stats = query.order_by(
             PlayerStats.season.desc(),
             PlayerStats.week.desc()
-        ).limit(limit).all()
+        ).limit(limit * 2).all()  # Fetch 2x to account for filtering
 
         if not player_stats:
             return 0.0
-
-        # Get team players
-        team_players = Player.query.filter_by(team=player.team).all()
-        team_player_ids = [p.id for p in team_players]
 
         yard_shares = []
         games_data = []
@@ -152,6 +158,13 @@ class PredictionService:
         team = Team.query.filter_by(team_abbr=player.team).first()
 
         for stat in player_stats:
+            # Skip DNP games
+            if not self._did_player_participate(stat, player.position):
+                continue
+
+            # Stop if we've collected enough games
+            if len(yard_shares) >= limit:
+                break
             # Get player's yards for this game
             if stat_type == 'receiving_yards':
                 player_yards = stat.receiving_yards or 0
@@ -200,13 +213,14 @@ class PredictionService:
 
         return round(weighted_share, 4)
 
-    def get_player_target_share(self, player_id, limit=20):
+    def get_player_target_share(self, player_id, limit=20, current_season_only=False):
         """
         Calculate player's share of team's total targets with time weighting
 
         Args:
             player_id: Player database ID
             limit: Number of recent games to analyze
+            current_season_only: If True, only use current season games (for players with 3+ games)
 
         Returns:
             Weighted average of player's target share (0-1)
@@ -215,11 +229,19 @@ class PredictionService:
         if not player:
             return 0.0
 
-        # Get player's recent games
-        player_stats = PlayerStats.query.filter(
+        # Build query for player's recent games
+        query = PlayerStats.query.filter(
             PlayerStats.player_id == player_id,
             PlayerStats.week.isnot(None)
-        ).order_by(
+        )
+
+        # If current_season_only is True, filter to current season
+        if current_season_only:
+            current_season = 2025
+            query = query.filter(PlayerStats.season == current_season)
+
+        # Get player's recent games
+        player_stats = query.order_by(
             PlayerStats.season.desc(),
             PlayerStats.week.desc()
         ).limit(limit).all()
@@ -301,28 +323,67 @@ class PredictionService:
 
         return np.array(weights)
 
+    def _did_player_participate(self, stat, player_position):
+        """
+        Check if player actually participated in the game (not DNP/injured)
+
+        Criteria:
+        - WR/TE: Had at least 1 target
+        - RB: Had at least 1 rush OR 1 target
+        - QB: Had at least 1 passing attempt
+
+        Returns: True if player participated, False if DNP
+        """
+        if player_position in ['WR', 'TE']:
+            return (stat.targets or 0) > 0
+        elif player_position == 'RB':
+            return ((stat.rushes or 0) > 0) or ((stat.targets or 0) > 0)
+        elif player_position == 'QB':
+            return (stat.passing_attempts or 0) > 0
+        else:
+            return True  # For other positions, include all games
+
     def get_player_stats_weighted(self, player_id, stat_type='receiving_yards', limit=20):
         """
         Get player's recent stats with time weighting
-        Returns: weighted mean, weighted std, raw values
+        Filters out games where player didn't participate (DNP/injured)
+        Returns: weighted mean, weighted std, raw values, current_season_games_count
         """
-        # Get recent games
+        # Get player info to check position
+        player = Player.query.get(player_id)
+        if not player:
+            return 0, 0, []
+
+        # Get recent games (fetch more than needed to account for filtering)
         stats = PlayerStats.query.filter(
             PlayerStats.player_id == player_id,
             PlayerStats.week.isnot(None)
         ).order_by(
             PlayerStats.season.desc(),
             PlayerStats.week.desc()
-        ).limit(limit).all()
+        ).limit(limit * 2).all()  # Fetch 2x in case we filter some out
 
         if not stats:
             return 0, 0, []
 
-        # Extract values and metadata
+        # Extract values and metadata, filtering out DNP games
         values = []
         games_data = []
+        current_season_games = 0
+        current_season = 2025  # Current season
 
         for stat in stats:
+            # Skip if player didn't participate
+            if not self._did_player_participate(stat, player.position):
+                continue
+
+            # Stop if we've collected enough games
+            if len(values) >= limit:
+                break
+
+            # Count current season games
+            if stat.season == current_season:
+                current_season_games += 1
             if stat_type == 'receiving_yards':
                 values.append(stat.receiving_yards or 0)
             elif stat_type == 'rushing_yards':
@@ -343,19 +404,23 @@ class PredictionService:
                 'week': stat.week
             })
 
+        # If no games found after filtering, return zeros
+        if len(values) == 0:
+            return 0, 0, [], 0
+
         values = np.array(values)
-        current_season = games_data[0]['season']
-        current_week = games_data[0]['week']
+        latest_season = games_data[0]['season']
+        latest_week = games_data[0]['week']
 
         # Calculate time weights
-        weights = self.calculate_time_weights(games_data, current_season, current_week)
+        weights = self.calculate_time_weights(games_data, latest_season, latest_week)
 
         # Weighted statistics
         weighted_mean = np.average(values, weights=weights)
         weighted_variance = np.average((values - weighted_mean) ** 2, weights=weights)
         weighted_std = np.sqrt(weighted_variance)
 
-        return weighted_mean, weighted_std, values.tolist()
+        return weighted_mean, weighted_std, values.tolist(), current_season_games
 
     def get_defensive_stats(self, team_abbr, stat_type='passing', current_season_only=True):
         """
@@ -425,16 +490,25 @@ class PredictionService:
         if not player:
             return {benchmark: 0.0 for benchmark in self.YARDAGE_BENCHMARKS}
 
-        # Get player stats
-        player_mean, player_std, recent_values = self.get_player_stats_weighted(
+        # Get player stats (now returns current season games count)
+        player_mean, player_std, recent_values, current_season_games = self.get_player_stats_weighted(
             player_id, stat_type=stat_type, limit=20
         )
 
         if player_mean == 0:
             return {benchmark: 0.0 for benchmark in self.YARDAGE_BENCHMARKS}
 
-        # Get player's yard share
-        player_yard_share = self.get_player_yard_share(player_id, stat_type=stat_type, limit=20)
+        # Determine if we should use current season only for yard share
+        # After 3+ games, yard share should reflect current season usage patterns only
+        use_current_season_only = current_season_games >= 3
+
+        # Get player's yard share (current season only if 3+ games)
+        player_yard_share = self.get_player_yard_share(
+            player_id,
+            stat_type=stat_type,
+            limit=20,
+            current_season_only=use_current_season_only
+        )
 
         # Get team offensive stats
         team_offense = self.get_team_offensive_stats(player.team, season=2025)
@@ -480,8 +554,9 @@ class PredictionService:
                 # Apply player's yard share to get individual projection
                 adjusted_mean = projected_team_yards * player_yard_share if player_yard_share > 0 else player_mean
 
-                # Blend with player's historical average (70% new model, 30% historical)
-                adjusted_mean = (adjusted_mean * 0.7) + (player_mean * 0.3)
+                # Blend matchup-based projection with player's weighted average (80/20)
+                # This balances matchup-specific factors with player's historical performance
+                adjusted_mean = (adjusted_mean * 0.8) + (player_mean * 0.2)
         else:
             # Fall back to simpler model if team data unavailable
             if def_mean is not None:
@@ -529,7 +604,7 @@ class PredictionService:
             Touchdown probability as percentage
         """
         # Get player TD stats
-        player_td_avg, player_td_std, recent_tds = self.get_player_stats_weighted(
+        player_td_avg, player_td_std, recent_tds, _ = self.get_player_stats_weighted(
             player_id, stat_type='touchdowns', limit=20
         )
 
@@ -597,7 +672,7 @@ class PredictionService:
             return {benchmark: 0.0 for benchmark in self.QB_PASSING_BENCHMARKS}
 
         # Get player passing stats
-        player_mean, player_std, recent_values = self.get_player_stats_weighted(
+        player_mean, player_std, recent_values, _ = self.get_player_stats_weighted(
             player_id, stat_type='passing_yards', limit=20
         )
 
@@ -681,7 +756,7 @@ class PredictionService:
             Dictionary with probabilities for 1+, 2+, 3+, 4+ TDs
         """
         # Get player passing TD stats
-        player_td_avg, player_td_std, recent_tds = self.get_player_stats_weighted(
+        player_td_avg, player_td_std, recent_tds, _ = self.get_player_stats_weighted(
             player_id, stat_type='passing_touchdowns', limit=20
         )
 
@@ -741,7 +816,7 @@ class PredictionService:
             Dictionary with interception probability
         """
         # Get player interception stats
-        player_int_avg, player_int_std, recent_ints = self.get_player_stats_weighted(
+        player_int_avg, player_int_std, recent_ints, _ = self.get_player_stats_weighted(
             player_id, stat_type='interceptions', limit=20
         )
 
@@ -794,7 +869,7 @@ class PredictionService:
         if not player:
             return {benchmark: 0.0 for benchmark in RECEPTIONS_BENCHMARKS}
 
-        # Get actual reception counts from stats
+        # Get actual reception counts from stats (includes current season games count)
         stats = PlayerStats.query.filter(
             PlayerStats.player_id == player_id,
             PlayerStats.week.isnot(None)
@@ -806,12 +881,15 @@ class PredictionService:
         if not stats:
             return {benchmark: 0.0 for benchmark in RECEPTIONS_BENCHMARKS}
 
+        # Count current season games for target share decision
+        current_season = 2025
+        current_season_games = sum(1 for stat in stats if stat.season == current_season)
+
         # Extract reception values
         reception_values = [stat.receptions or 0 for stat in stats]
 
         # Calculate time weights
         games_data = [{'season': stat.season, 'week': stat.week} for stat in stats]
-        current_season = games_data[0]['season']
         current_week = games_data[0]['week']
         weights = self.calculate_time_weights(games_data, current_season, current_week)
 
@@ -828,8 +906,16 @@ class PredictionService:
                 'player_avg': 0.0
             }
 
-        # Get player's target share
-        player_target_share = self.get_player_target_share(player_id, limit=20)
+        # Determine if we should use current season only for target share
+        # After 3+ games, target share should reflect current season usage patterns only
+        use_current_season_only = current_season_games >= 3
+
+        # Get player's target share (current season only if 3+ games)
+        player_target_share = self.get_player_target_share(
+            player_id,
+            limit=20,
+            current_season_only=use_current_season_only
+        )
 
         # Get team offensive stats
         team_offense = self.get_team_offensive_stats(player.team, season=2025)
@@ -840,25 +926,46 @@ class PredictionService:
         # Get opponent defensive stats (passing defense as proxy)
         def_mean, def_std = self.get_defensive_stats(opponent_team, stat_type='passing')
 
-        # Calculate adjusted projection
-        if def_mean is not None and team_offense is not None and player_target_share > 0:
-            team_pass_rate = team_offense['pass_rate']
-            league_avg_pass_rate = league_splits['pass_rate']
+        # Calculate adjusted projection using team passing attempts
+        if player_target_share > 0:
+            # Calculate team's average passing attempts from QB stats
+            team_qbs = Player.query.filter_by(team=player.team, position='QB').all()
+            team_qb_ids = [qb.id for qb in team_qbs]
 
-            # Calculate offensive tendency multiplier
-            tendency_multiplier = team_pass_rate / league_avg_pass_rate if league_avg_pass_rate > 0 else 1.0
+            # Get QB passing attempts for this season
+            qb_stats = PlayerStats.query.filter(
+                PlayerStats.player_id.in_(team_qb_ids),
+                PlayerStats.season == 2025,
+                PlayerStats.week.isnot(None)
+            ).all()
 
-            # Adjust defensive passing yards allowed based on offensive tendency
-            adjusted_def_yards = def_mean * tendency_multiplier
+            if qb_stats:
+                # Group by week and sum attempts
+                weekly_attempts = {}
+                for qb_stat in qb_stats:
+                    week_key = qb_stat.week
+                    if week_key not in weekly_attempts:
+                        weekly_attempts[week_key] = 0
+                    weekly_attempts[week_key] += (qb_stat.passing_attempts or 0)
 
-            # Estimate team receptions (rough estimate: ~0.06 receptions per passing yard)
-            estimated_team_receptions = adjusted_def_yards * 0.06
+                # Calculate average attempts per game
+                team_pass_attempts = np.mean(list(weekly_attempts.values())) if weekly_attempts else 35
+            else:
+                team_pass_attempts = 35  # Default to ~35 if no QB data
 
-            # Apply player's target share
-            adjusted_mean = estimated_team_receptions * player_target_share
+            # Estimate player's targets based on target share
+            estimated_targets = team_pass_attempts * player_target_share
 
-            # Blend with player's historical average (70% new model, 30% historical)
-            adjusted_mean = (adjusted_mean * 0.7) + (weighted_mean * 0.3)
+            # Get player's catch rate from recent games
+            total_targets = sum([stat.targets or 0 for stat in stats if (stat.targets or 0) > 0])
+            total_catches = sum([stat.receptions or 0 for stat in stats if (stat.targets or 0) > 0])
+            catch_rate = total_catches / total_targets if total_targets > 0 else 0.65  # Default 65% catch rate
+
+            # Project receptions based on targets and catch rate
+            adjusted_mean = estimated_targets * catch_rate
+
+            # Blend with player's historical average (80% model, 20% historical)
+            adjusted_mean = (adjusted_mean * 0.8) + (weighted_mean * 0.2)
         else:
             # Fall back to simpler model if team data unavailable
             if def_mean is not None:

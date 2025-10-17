@@ -63,6 +63,15 @@ export const apiService = {
   // Fantasy Projections
   getFantasyProjections: (params = {}) =>
     api.get('/fantasy/projections', { params }),
+
+  // Model Accuracy
+  getPlayerAccuracy: (playerId, params = {}) =>
+    api.get(`/accuracy/player/${playerId}`, { params }),
+  getAccuracySummary: (season = 2025) =>
+    api.get('/accuracy/summary', { params: { season } }),
 };
+
+// Export simplified API functions
+export const getAccuracySummary = (season) => apiService.getAccuracySummary(season).then(res => res.data);
 
 export default api;

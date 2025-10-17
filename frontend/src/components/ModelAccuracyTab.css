@@ -1,0 +1,472 @@
+.model-accuracy-container {
+  padding: 20px 0;
+}
+
+.model-accuracy-container h4 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  color: #333;
+}
+
+.accuracy-subtitle {
+  margin: 0 0 24px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+/* Summary Section */
+.accuracy-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.summary-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.summary-card h5 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summary-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summary-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.summary-stat.winner {
+  background: linear-gradient(90deg, transparent 0%, #dcfce7 100%);
+  border-left: 3px solid #22c55e;
+  padding-left: 12px;
+  margin-left: -12px;
+  border-radius: 4px;
+}
+
+.summary-stat .stat-label {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.summary-stat .stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.win-badge {
+  font-size: 16px;
+  font-weight: 700;
+  color: #16a34a;
+  margin-left: 4px;
+}
+
+.win-count {
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.win-count.model {
+  color: #0f766e;
+  background: #ccfbf1;
+}
+
+.win-count.espn {
+  color: #7c3aed;
+  background: #ede9fe;
+}
+
+.vs {
+  margin: 0 6px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.overall-card {
+  grid-column: 1 / -1;
+}
+
+.stat-card {
+  position: relative;
+}
+
+.stat-card.model-wins {
+  border: 2px solid #14b8a6;
+  background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+}
+
+.stat-card.espn-wins {
+  border: 2px solid #8b5cf6;
+  background: linear-gradient(135deg, #faf5ff 0%, #ede9fe 100%);
+}
+
+.comparisons-count {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #64748b;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Table */
+.accuracy-table-container {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: white;
+}
+
+.accuracy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.accuracy-table thead {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: white;
+}
+
+.accuracy-table thead th {
+  padding: 14px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #0f172a;
+}
+
+.accuracy-table thead th:first-child {
+  padding-left: 20px;
+  width: 25%;
+}
+
+.accuracy-table thead th:nth-child(2),
+.accuracy-table thead th:nth-child(3),
+.accuracy-table thead th:nth-child(4) {
+  text-align: center;
+  width: 12%;
+}
+
+.accuracy-table thead th:nth-child(5),
+.accuracy-table thead th:nth-child(6) {
+  text-align: center;
+  width: 13%;
+}
+
+.accuracy-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.2s;
+}
+
+.accuracy-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.accuracy-table tbody tr.bye-week {
+  background-color: #f1f5f9;
+  opacity: 0.7;
+}
+
+.accuracy-table tbody tr.upcoming {
+  background-color: #fefce8;
+}
+
+.accuracy-table tbody td {
+  padding: 12px;
+}
+
+.accuracy-table tbody td:first-child {
+  padding-left: 20px;
+}
+
+.week-number {
+  display: block;
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.stat-name {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  padding-left: 12px;
+}
+
+.stat-name-bye {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.stat-value {
+  text-align: center;
+  font-weight: 500;
+  color: #475569;
+}
+
+.stat-value.actual {
+  font-weight: 700;
+  color: #1e293b;
+  background: #f8fafc;
+}
+
+.error-value {
+  text-align: center;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.error-value.better {
+  color: #16a34a;
+  background: #dcfce7;
+}
+
+.error-value.worse {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
+/* Loading and Error States */
+.accuracy-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 40px;
+  justify-content: center;
+  color: #666;
+}
+
+.accuracy-error {
+  padding: 20px;
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  text-align: center;
+}
+
+.accuracy-empty {
+  padding: 40px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.no-data-message {
+  text-align: center;
+  padding: 32px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.no-data-message p {
+  margin: 0;
+}
+
+.spinner-small {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Season-Long Accuracy Section */
+.season-long-section {
+  margin-top: 32px;
+  padding: 24px;
+  background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
+  border: 2px solid #fbbf24;
+  border-radius: 12px;
+}
+
+.section-title {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: #92400e;
+  font-weight: 700;
+}
+
+.section-subtitle {
+  margin: 0 0 20px 0;
+  font-size: 13px;
+  color: #78350f;
+}
+
+.season-long-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.season-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px;
+  transition: all 0.3s;
+}
+
+.season-card.model-wins {
+  border-color: #14b8a6;
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%);
+  box-shadow: 0 4px 6px rgba(20, 184, 166, 0.1);
+}
+
+.season-card.espn-wins {
+  border-color: #8b5cf6;
+  background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%);
+  box-shadow: 0 4px 6px rgba(139, 92, 246, 0.1);
+}
+
+.season-card h5 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: #1e293b;
+  font-weight: 700;
+  text-align: center;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 8px;
+}
+
+.season-comparison {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.season-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.season-item.winner {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  border: 2px solid #22c55e;
+  transform: scale(1.05);
+}
+
+.season-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.season-error {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.winner-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 3px 10px;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+}
+
+.vs-divider {
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.season-weeks {
+  text-align: center;
+  font-size: 11px;
+  color: #64748b;
+  font-style: italic;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .accuracy-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .season-long-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .season-comparison {
+    flex-direction: column;
+  }
+
+  .vs-divider {
+    transform: rotate(90deg);
+  }
+
+  .accuracy-table {
+    font-size: 12px;
+  }
+
+  .accuracy-table thead th,
+  .accuracy-table tbody td {
+    padding: 8px 6px;
+  }
+
+  .accuracy-table thead th:first-child,
+  .accuracy-table tbody td:first-child {
+    padding-left: 12px;
+  }
+
+  .week-number {
+    font-size: 11px;
+  }
+
+  .stat-name {
+    font-size: 10px;
+  }
+}

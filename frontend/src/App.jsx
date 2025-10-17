@@ -3,6 +3,7 @@ import PlayerList from './components/PlayerList';
 import ParlayBuilder from './components/ParlayBuilder';
 import TrendingPlayers from './components/TrendingPlayers';
 import FantasyProjections from './components/FantasyProjections';
+import WeeklyModelAccuracy from './components/WeeklyModelAccuracy';
 import './App.css';
 
 function App() {
@@ -45,6 +46,12 @@ function App() {
           >
             Parlay Builder
           </button>
+          <button
+            className={`app-tab ${activeTab === 'accuracy' ? 'active' : ''}`}
+            onClick={() => setActiveTab('accuracy')}
+          >
+            Model Accuracy
+          </button>
         </div>
       </div>
 
@@ -54,6 +61,7 @@ function App() {
         {activeTab === 'trending' && <TrendingPlayers />}
         {activeTab === 'fantasy' && <FantasyProjections />}
         {activeTab === 'parlays' && <ParlayBuilder />}
+        {activeTab === 'accuracy' && <WeeklyModelAccuracy />}
       </div>
     </div>
   );
