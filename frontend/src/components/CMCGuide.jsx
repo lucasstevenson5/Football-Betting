@@ -26,15 +26,15 @@ const CMCGuide = ({ activeTab, onPlayerClick }) => {
     // Auto-advance based on tab navigation
     if (activeTab === 'players' && guideStep === 0) {
       // Stay on step 0 - initial message
-    } else if (activeTab === 'players' && guideStep > 0) {
-      // User came back to players tab
-    } else if (activeTab === 'accuracy' && guideStep < 2) {
-      // User went to accuracy tab
-      setGuideStep(2);
+    } else if (activeTab === 'players' && guideStep === 1) {
+      // User clicked a player and is viewing predictions, stay on step 1
     } else if (activeTab === 'accuracy' && guideStep === 2) {
-      // Show final message after brief delay
+      // User is on accuracy tab, move to step 3
+      setGuideStep(3);
+    } else if (activeTab === 'accuracy' && guideStep === 3) {
+      // User is on accuracy tab at step 3, show final message after delay
       setTimeout(() => {
-        setGuideStep(3);
+        setGuideStep(4);
       }, 1500);
     }
   }, [activeTab, guideStep, hasSeenGuide]);
@@ -43,12 +43,14 @@ const CMCGuide = ({ activeTab, onPlayerClick }) => {
   const getGuideMessage = () => {
     switch (guideStep) {
       case 0:
-        return "Click on a player, may I suggest Christian McCaffrey? Then check out the Predictions tab!";
+        return "Click on a player, may I suggest Christian McCaffrey?";
       case 1:
-        return "Great! Now check out the Model Accuracy tab to see how we're doing!";
+        return "Check out the Predictions tab!";
       case 2:
-        return "Awesome! Check out our accuracy tracking.";
+        return "Great! Now check out the Model Accuracy tab to see how we're doing!";
       case 3:
+        return "Awesome! Check out our accuracy tracking.";
+      case 4:
         return "Have fun and go 49ers! 🏈";
       default:
         return "Welcome! Let me show you around.";
@@ -56,8 +58,10 @@ const CMCGuide = ({ activeTab, onPlayerClick }) => {
   };
 
   const handleCMCClick = () => {
-    // Advance to next step when clicking on CMC
-    if (guideStep < 3) {
+    // Advance to next step when clicking on CMC (simulates clicking a player)
+    if (guideStep === 0) {
+      setGuideStep(1); // Move from "click a player" to "check predictions tab"
+    } else if (guideStep < 4) {
       setGuideStep(guideStep + 1);
     }
   };
@@ -107,7 +111,7 @@ const CMCGuide = ({ activeTab, onPlayerClick }) => {
         <div className="cmc-speech-bubble">
           <div className="cmc-message">{getGuideMessage()}</div>
 
-          {guideStep === 3 && (
+          {guideStep === 4 && (
             <button className="cmc-reset" onClick={handleReset}>
               Start Over
             </button>
