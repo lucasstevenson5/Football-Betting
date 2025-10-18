@@ -15,6 +15,7 @@ function App() {
 
   // Track when a player is clicked (for CMC guide)
   const [playerClicked, setPlayerClicked] = useState(false);
+  const [predictionsTabClicked, setPredictionsTabClicked] = useState(false);
 
   // Save active tab to localStorage whenever it changes
   useEffect(() => {
@@ -24,6 +25,11 @@ function App() {
   // Callback for when a player is clicked
   const handlePlayerClick = () => {
     setPlayerClicked(true);
+  };
+
+  // Callback for when predictions tab is clicked within player detail
+  const handlePredictionsTabClick = () => {
+    setPredictionsTabClicked(true);
   };
 
   return (
@@ -67,7 +73,12 @@ function App() {
 
       {/* Content */}
       <div className="app-content">
-        {activeTab === 'players' && <PlayerList onPlayerClick={handlePlayerClick} />}
+        {activeTab === 'players' && (
+          <PlayerList
+            onPlayerClick={handlePlayerClick}
+            onPredictionsTabClick={handlePredictionsTabClick}
+          />
+        )}
         {activeTab === 'trending' && <TrendingPlayers />}
         {activeTab === 'fantasy' && <FantasyProjections />}
         {activeTab === 'parlays' && <ParlayBuilder />}
@@ -75,7 +86,11 @@ function App() {
       </div>
 
       {/* CMC Interactive Guide */}
-      <CMCGuide activeTab={activeTab} playerClicked={playerClicked} />
+      <CMCGuide
+        activeTab={activeTab}
+        playerClicked={playerClicked}
+        predictionsTabClicked={predictionsTabClicked}
+      />
     </div>
   );
 }

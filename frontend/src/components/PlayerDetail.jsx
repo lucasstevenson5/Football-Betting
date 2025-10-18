@@ -48,7 +48,7 @@ const POSITION_COLORS = {
   'TE': '#8b5cf6'   // Purple
 };
 
-const PlayerDetail = ({ playerId, onClose }) => {
+const PlayerDetail = ({ playerId, onClose, onPredictionsTabClick }) => {
   const [playerData, setPlayerData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -142,7 +142,13 @@ const PlayerDetail = ({ playerId, onClose }) => {
           </button>
           <button
             className={`tab ${activeTab === 'predictions' ? 'active' : ''}`}
-            onClick={() => setActiveTab('predictions')}
+            onClick={() => {
+              setActiveTab('predictions');
+              // Notify parent that predictions tab was clicked (for CMC guide)
+              if (onPredictionsTabClick) {
+                onPredictionsTabClick();
+              }
+            }}
           >
             Predictions
           </button>
