@@ -51,9 +51,30 @@
   margin-bottom: 30px;
   padding-bottom: 20px;
   border-bottom: 2px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 30px;
 }
 
-.player-header h2 {
+.player-image-container {
+  flex-shrink: 0;
+}
+
+.player-cartoon-image {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.player-header-info {
+  flex: 1;
+}
+
+.player-header-info h2 {
   margin: 0 0 10px 0;
   font-size: 32px;
   color: #333;

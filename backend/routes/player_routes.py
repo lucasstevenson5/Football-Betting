@@ -9,11 +9,11 @@ import numpy as np
 player_bp = Blueprint('players', __name__, url_prefix='/api/players')
 
 
-def get_team_week_6_opponent(team_abbr, season=2025):
-    """Get Week 6 opponent for a team, or return 'BYE' if on bye week"""
+def get_team_current_week_opponent(team_abbr, week=7, season=2025):
+    """Get current week opponent for a team, or return 'BYE' if on bye week"""
     game = Schedule.query.filter(
         Schedule.season == season,
-        Schedule.week == 6,
+        Schedule.week == week,
         or_(
             Schedule.home_team == team_abbr,
             Schedule.away_team == team_abbr
@@ -22,12 +22,18 @@ def get_team_week_6_opponent(team_abbr, season=2025):
 
     if not game:
         # Team is on bye week
-        return {'opponent': 'BYE', 'is_home': None}
+        return {'opponent': 'BYE', 'is_home': None, 'week': week}
 
     if game.home_team == team_abbr:
-        return {'opponent': game.away_team, 'is_home': True}
+        return {'opponent': game.away_team, 'is_home': True, 'week': week}
     else:
-        return {'opponent': game.home_team, 'is_home': False}
+        return {'opponent': game.home_team, 'is_home': False, 'week': week}
+
+
+# Backwards compatibility - keep old function for Week 6
+def get_team_week_6_opponent(team_abbr, season=2025):
+    """Get Week 6 opponent for a team (for backwards compatibility)"""
+    return get_team_current_week_opponent(team_abbr, week=6, season=season)
 
 @player_bp.route('/', methods=['GET'])
 def get_all_players():
@@ -72,16 +78,27 @@ def get_all_players():
 
 @player_bp.route('/<int:player_id>', methods=['GET'])
 def get_player(player_id):
-    """Get a specific player by ID with Week 6 opponent"""
+    """Get a specific player by ID with Week 7 opponent"""
     try:
         player = Player.query.get_or_404(player_id)
         player_dict = player.to_dict()
 
-        # Add Week 6 opponent info
-        opponent_info = get_team_week_6_opponent(player.team)
-        if opponent_info:
-            player_dict['week_6_opponent'] = opponent_info['opponent']
-            player_dict['week_6_is_home'] = opponent_info['is_home']
+        # Add Week 7 opponent info (current week)
+        week7_info = get_team_current_week_opponent(player.team, week=7)
+        if week7_info:
+            player_dict['week_7_opponent'] = week7_info['opponent']
+            player_dict['week_7_is_home'] = week7_info['is_home']
+            player_dict['current_week'] = week7_info['week']
+        else:
+            player_dict['week_7_opponent'] = None
+            player_dict['week_7_is_home'] = None
+            player_dict['current_week'] = 7
+
+        # Keep Week 6 for backwards compatibility
+        week6_info = get_team_week_6_opponent(player.team)
+        if week6_info:
+            player_dict['week_6_opponent'] = week6_info['opponent']
+            player_dict['week_6_is_home'] = week6_info['is_home']
         else:
             player_dict['week_6_opponent'] = None
             player_dict['week_6_is_home'] = None
@@ -332,12 +349,23 @@ def get_player_career_stats(player_id):
             }
         }
 
-        # Add Week 6 opponent info to player data
+        # Add Week 7 opponent info to player data (current week)
         player_dict = player.to_dict()
-        opponent_info = get_team_week_6_opponent(player.team)
-        if opponent_info:
-            player_dict['week_6_opponent'] = opponent_info['opponent']
-            player_dict['week_6_is_home'] = opponent_info['is_home']
+        week7_info = get_team_current_week_opponent(player.team, week=7)
+        if week7_info:
+            player_dict['week_7_opponent'] = week7_info['opponent']
+            player_dict['week_7_is_home'] = week7_info['is_home']
+            player_dict['current_week'] = week7_info['week']
+        else:
+            player_dict['week_7_opponent'] = None
+            player_dict['week_7_is_home'] = None
+            player_dict['current_week'] = 7
+
+        # Keep Week 6 for backwards compatibility
+        week6_info = get_team_week_6_opponent(player.team)
+        if week6_info:
+            player_dict['week_6_opponent'] = week6_info['opponent']
+            player_dict['week_6_is_home'] = week6_info['is_home']
         else:
             player_dict['week_6_opponent'] = None
             player_dict['week_6_is_home'] = None

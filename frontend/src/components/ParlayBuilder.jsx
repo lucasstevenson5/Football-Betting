@@ -38,7 +38,13 @@ const NFL_TEAMS = [
   { name: 'Commanders', abbr: 'WAS' }
 ].sort((a, b) => a.name.localeCompare(b.name));
 
-const ParlayBuilder = () => {
+const ParlayBuilder = ({
+  onCreateParlayClick,
+  onPlayerAddedToParlay,
+  onStatlineAddedToParlay,
+  onSportsbookOddsEntered,
+  onParlaySaved
+}) => {
   const [parlays, setParlays] = useState([]);
   const [currentParlay, setCurrentParlay] = useState(null);
   const [isBuilding, setIsBuilding] = useState(false);
@@ -82,6 +88,11 @@ const ParlayBuilder = () => {
       createdAt: new Date().toISOString()
     });
     setIsBuilding(true);
+
+    // Notify Puka guide that Create Parlay was clicked
+    if (onCreateParlayClick) {
+      onCreateParlayClick();
+    }
   };
 
   const saveParlay = () => {
@@ -89,6 +100,11 @@ const ParlayBuilder = () => {
       setParlays([...parlays, currentParlay]);
       setCurrentParlay(null);
       setIsBuilding(false);
+
+      // Notify Puka guide that parlay was saved
+      if (onParlaySaved) {
+        onParlaySaved();
+      }
     }
   };
 
@@ -173,6 +189,11 @@ const ParlayBuilder = () => {
     setOverUnder('OVER');
     setOpponent('');
     setPrediction(null);
+
+    // Notify Puka guide that a player was added to parlay
+    if (onPlayerAddedToParlay) {
+      onPlayerAddedToParlay();
+    }
   };
 
   // Close stat modal
@@ -319,6 +340,11 @@ const ParlayBuilder = () => {
       ...currentParlay,
       legs: [...currentParlay.legs, newLeg]
     });
+
+    // Notify Puka guide that statline was added to parlay
+    if (onStatlineAddedToParlay) {
+      onStatlineAddedToParlay();
+    }
 
     closeStatModal();
   };
@@ -567,10 +593,18 @@ const ParlayBuilder = () => {
                         type="number"
                         placeholder="e.g., +250 or -150"
                         value={currentParlay.bookCombinedOdds || ''}
-                        onChange={(e) => setCurrentParlay({
-                          ...currentParlay,
-                          bookCombinedOdds: parseFloat(e.target.value) || null
-                        })}
+                        onChange={(e) => {
+                          const newOdds = parseFloat(e.target.value) || null;
+                          setCurrentParlay({
+                            ...currentParlay,
+                            bookCombinedOdds: newOdds
+                          });
+
+                          // Notify Puka guide that sportsbook odds were entered
+                          if (newOdds && onSportsbookOddsEntered) {
+                            onSportsbookOddsEntered();
+                          }
+                        }}
                         className="bet-amount-field"
                         style={{ width: '120px' }}
                       />

@@ -8,6 +8,7 @@ from routes.prediction_routes import prediction_bp
 from routes.comparison_routes import comparison_bp
 from routes.trending_routes import trending_bp
 from routes.fantasy_routes import fantasy_bp
+from routes.accuracy_routes import accuracy_bp
 import schedule
 import time
 import threading
@@ -33,6 +34,7 @@ def create_app():
     app.register_blueprint(comparison_bp)
     app.register_blueprint(trending_bp)
     app.register_blueprint(fantasy_bp)
+    app.register_blueprint(accuracy_bp)
 
     # Create tables and run migrations
     with app.app_context():

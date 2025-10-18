@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import PredictionDisplay from './PredictionDisplay';
+import { getPlayerImage } from '../utils/playerImages';
 import './PlayerDetail.css';
 
 // NFL Teams mapping
@@ -47,7 +48,7 @@ const POSITION_COLORS = {
   'TE': '#8b5cf6'   // Purple
 };
 
-const PlayerDetail = ({ playerId, onClose }) => {
+const PlayerDetail = ({ playerId, onClose, onPredictionsTabClick, onModelAccuracyClick }) => {
   const [playerData, setPlayerData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -93,6 +94,7 @@ const PlayerDetail = ({ playerId, onClose }) => {
   }
 
   const { player, seasons, career_stats } = playerData;
+  const playerImage = getPlayerImage(player.name);
 
   return (
     <div className="player-detail-overlay" onClick={onClose}>
@@ -100,22 +102,33 @@ const PlayerDetail = ({ playerId, onClose }) => {
         <button className="close-button" onClick={onClose}>×</button>
 
         <div className="player-header">
-          <h2>{player.name}</h2>
-          <div className="player-info">
-            <span
-              className="position"
-              style={{
-                background: POSITION_COLORS[player.position] || '#000',
-                color: 'white'
-              }}
-            >
-              {player.position}
-            </span>
-            {player.team && (
-              <span className="team" style={{ background: '#000', color: 'white' }}>
-                {NFL_TEAMS[player.team] || player.team}
+          {playerImage && (
+            <div className="player-image-container">
+              <img
+                src={playerImage}
+                alt={player.name}
+                className="player-cartoon-image"
+              />
+            </div>
+          )}
+          <div className="player-header-info">
+            <h2>{player.name}</h2>
+            <div className="player-info">
+              <span
+                className="position"
+                style={{
+                  background: POSITION_COLORS[player.position] || '#000',
+                  color: 'white'
+                }}
+              >
+                {player.position}
               </span>
-            )}
+              {player.team && (
+                <span className="team" style={{ background: '#000', color: 'white' }}>
+                  {NFL_TEAMS[player.team] || player.team}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -129,7 +142,13 @@ const PlayerDetail = ({ playerId, onClose }) => {
           </button>
           <button
             className={`tab ${activeTab === 'predictions' ? 'active' : ''}`}
-            onClick={() => setActiveTab('predictions')}
+            onClick={() => {
+              setActiveTab('predictions');
+              // Notify parent that predictions tab was clicked (for CMC guide)
+              if (onPredictionsTabClick) {
+                onPredictionsTabClick();
+              }
+            }}
           >
             Predictions
           </button>
@@ -330,8 +349,10 @@ const PlayerDetail = ({ playerId, onClose }) => {
             playerName={player.name}
             playerTeam={player.team}
             playerPosition={player.position}
-            week6Opponent={player.week_6_opponent}
-            week6IsHome={player.week_6_is_home}
+            currentWeekOpponent={player.week_7_opponent}
+            currentWeekIsHome={player.week_7_is_home}
+            currentWeek={player.current_week || 7}
+            onModelAccuracyClick={onModelAccuracyClick}
           />
         )}
       </div>
