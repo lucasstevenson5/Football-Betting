@@ -5,7 +5,7 @@ import './CMCGuide.css';
  * CMCGuide - Interactive guide with Christian McCaffrey
  * Walks users through the app features step by step
  */
-const CMCGuide = ({ activeTab, playerClicked, predictionsTabClicked }) => {
+const CMCGuide = ({ activeTab, playerClicked, predictionsTabClicked, modelAccuracyClicked }) => {
   const [guideStep, setGuideStep] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
   const [hasSeenGuide, setHasSeenGuide] = useState(false);
@@ -33,8 +33,17 @@ const CMCGuide = ({ activeTab, playerClicked, predictionsTabClicked }) => {
     }
   }, [predictionsTabClicked, guideStep]);
 
+  // React to model accuracy tab being clicked
+  useEffect(() => {
+    if (modelAccuracyClicked && guideStep === 2) {
+      setGuideStep(3); // Move from "check model accuracy" to acknowledgment
+    }
+  }, [modelAccuracyClicked, guideStep]);
+
   // Guide progression based on tab changes
   useEffect(() => {
+    console.log('CMC Guide - Tab Effect:', { activeTab, guideStep, hasSeenGuide });
+
     if (hasSeenGuide) return;
 
     // Auto-advance based on tab navigation
@@ -44,6 +53,7 @@ const CMCGuide = ({ activeTab, playerClicked, predictionsTabClicked }) => {
       // User clicked a player and is viewing predictions, stay on step 1
     } else if (activeTab === 'accuracy' && guideStep === 2) {
       // User is on accuracy tab, move to step 3
+      console.log('CMC Guide - Advancing to step 3');
       setGuideStep(3);
     }
   }, [activeTab, guideStep, hasSeenGuide]);

@@ -4,7 +4,7 @@ import PlayerCard from './PlayerCard';
 import PlayerDetail from './PlayerDetail';
 import './PlayerList.css';
 
-const PlayerList = ({ onPlayerClick, onPredictionsTabClick }) => {
+const PlayerList = ({ onPlayerClick, onPredictionsTabClick, onModelAccuracyClick }) => {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -272,6 +272,7 @@ const PlayerList = ({ onPlayerClick, onPredictionsTabClick }) => {
           playerId={selectedPlayerId}
           onClose={() => setSelectedPlayerId(null)}
           onPredictionsTabClick={onPredictionsTabClick}
+          onModelAccuracyClick={onModelAccuracyClick}
         />
       )}
     </div>

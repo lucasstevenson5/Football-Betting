@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import './PredictionDisplay.css';
+import ModelAccuracyTab from './ModelAccuracyTab';
+import ModelPlotsTab from './ModelPlotsTab';
 
 // NFL Teams mapping (team name without location -> abbreviation)
 const NFL_TEAMS = [
@@ -38,7 +40,7 @@ const NFL_TEAMS = [
   { name: 'Commanders', abbr: 'WAS' }
 ].sort((a, b) => a.name.localeCompare(b.name));
 
-const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, week6Opponent, week6IsHome }) => {
+const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, currentWeekOpponent, currentWeekIsHome, currentWeek = 7, onModelAccuracyClick }) => {
   const [opponent, setOpponent] = useState('');
   const [prediction, setPrediction] = useState(null);
   const [hitRates, setHitRates] = useState(null);
@@ -80,8 +82,8 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, w
 
   const fetchComparison = async () => {
     try {
-      // Use the opponent from state, or fallback to week6Opponent
-      const opponentToUse = opponent || week6Opponent;
+      // Use the opponent from state, or fallback to currentWeekOpponent
+      const opponentToUse = opponent || currentWeekOpponent;
       if (!opponentToUse) {
         console.error('No opponent available for comparison');
         return;
@@ -128,10 +130,10 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, w
     return hitRates.hit_rates[statType][threshold];
   };
 
-  // Fetch hit rates and auto-load Week 6 opponent prediction
+  // Fetch hit rates and auto-load current week opponent prediction
   useEffect(() => {
     const fetchData = async () => {
-      console.log('PredictionDisplay useEffect - week6Opponent:', week6Opponent);
+      console.log(`PredictionDisplay useEffect - Week ${currentWeek} opponent:`, currentWeekOpponent);
 
       // Fetch hit rates
       try {
@@ -147,18 +149,18 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, w
       // Fetch projection comparison
       fetchComparison();
 
-      // Auto-load prediction for Week 6 opponent (skip if bye week)
-      if (week6Opponent && week6Opponent !== 'BYE') {
-        console.log('Auto-loading prediction for Week 6 opponent:', week6Opponent);
-        setOpponent(week6Opponent);
-        await fetchPrediction(week6Opponent);
-      } else if (week6Opponent === 'BYE') {
+      // Auto-load prediction for current week opponent (skip if bye week)
+      if (currentWeekOpponent && currentWeekOpponent !== 'BYE') {
+        console.log(`Auto-loading prediction for Week ${currentWeek} opponent:`, currentWeekOpponent);
+        setOpponent(currentWeekOpponent);
+        await fetchPrediction(currentWeekOpponent);
+      } else if (currentWeekOpponent === 'BYE') {
         console.log('Player on bye week - no predictions to load');
       }
     };
 
     fetchData();
-  }, [playerId, week6Opponent]);
+  }, [playerId, currentWeekOpponent]);
 
   // Refetch comparison when opponent changes
   useEffect(() => {
@@ -175,19 +177,19 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, w
       <h3>Performance Predictions</h3>
 
       <div className="opponent-selector">
-        {week6Opponent && (
-          <div className={`week-6-matchup ${week6Opponent === 'BYE' ? 'bye-week' : ''}`}>
-            <span className="matchup-label">Week 6 Matchup:</span>
+        {currentWeekOpponent && (
+          <div className={`week-7-matchup ${currentWeekOpponent === 'BYE' ? 'bye-week' : ''}`}>
+            <span className="matchup-label">Week {currentWeek} Matchup:</span>
             <span className="matchup-info">
-              {week6Opponent === 'BYE'
+              {currentWeekOpponent === 'BYE'
                 ? 'BYE'
-                : `${week6IsHome ? 'vs' : '@'} ${week6Opponent}`
+                : `${currentWeekIsHome ? 'vs' : '@'} ${currentWeekOpponent}`
               }
             </span>
           </div>
         )}
         <label htmlFor="opponent-select">
-          {week6Opponent && week6Opponent !== 'BYE' ? 'Or choose different opponent:' : 'Select Opponent:'}
+          {currentWeekOpponent && currentWeekOpponent !== 'BYE' ? 'Or choose different opponent:' : 'Select Opponent:'}
         </label>
         <select
           id="opponent-select"
@@ -220,6 +222,24 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, w
           onClick={() => setPredictionSource('comparison')}
         >
           Comparison
+        </button>
+        <button
+          className={`prediction-tab ${predictionSource === 'accuracy' ? 'active' : ''}`}
+          onClick={() => {
+            setPredictionSource('accuracy');
+            // Notify parent that Model Accuracy tab was clicked (for CMC guide)
+            if (onModelAccuracyClick) {
+              onModelAccuracyClick();
+            }
+          }}
+        >
+          Model Accuracy
+        </button>
+        <button
+          className={`prediction-tab ${predictionSource === 'plots' ? 'active' : ''}`}
+          onClick={() => setPredictionSource('plots')}
+        >
+          Model Plots
         </button>
       </div>
 
@@ -762,6 +782,16 @@ const PredictionDisplay = ({ playerId, playerName, playerTeam, playerPosition, w
         <div className="comparison-no-data">
           <p>No comparison data available for this player.</p>
         </div>
+      )}
+
+      {/* Model Accuracy Tab */}
+      {predictionSource === 'accuracy' && (
+        <ModelAccuracyTab playerId={playerId} />
+      )}
+
+      {/* Model Plots Tab */}
+      {predictionSource === 'plots' && (
+        <ModelPlotsTab playerId={playerId} playerPosition={playerPosition} />
       )}
     </div>
   );

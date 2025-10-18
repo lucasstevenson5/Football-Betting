@@ -16,6 +16,7 @@ function App() {
   // Track when a player is clicked (for CMC guide)
   const [playerClicked, setPlayerClicked] = useState(false);
   const [predictionsTabClicked, setPredictionsTabClicked] = useState(false);
+  const [modelAccuracyClicked, setModelAccuracyClicked] = useState(false);
 
   // Save active tab to localStorage whenever it changes
   useEffect(() => {
@@ -30,6 +31,11 @@ function App() {
   // Callback for when predictions tab is clicked within player detail
   const handlePredictionsTabClick = () => {
     setPredictionsTabClicked(true);
+  };
+
+  // Callback for when model accuracy tab is clicked within player detail
+  const handleModelAccuracyClick = () => {
+    setModelAccuracyClicked(true);
   };
 
   return (
@@ -77,6 +83,7 @@ function App() {
           <PlayerList
             onPlayerClick={handlePlayerClick}
             onPredictionsTabClick={handlePredictionsTabClick}
+            onModelAccuracyClick={handleModelAccuracyClick}
           />
         )}
         {activeTab === 'trending' && <TrendingPlayers />}
@@ -90,6 +97,7 @@ function App() {
         activeTab={activeTab}
         playerClicked={playerClicked}
         predictionsTabClicked={predictionsTabClicked}
+        modelAccuracyClicked={modelAccuracyClicked}
       />
     </div>
   );

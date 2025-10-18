@@ -48,7 +48,7 @@ const POSITION_COLORS = {
   'TE': '#8b5cf6'   // Purple
 };
 
-const PlayerDetail = ({ playerId, onClose, onPredictionsTabClick }) => {
+const PlayerDetail = ({ playerId, onClose, onPredictionsTabClick, onModelAccuracyClick }) => {
   const [playerData, setPlayerData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -352,6 +352,7 @@ const PlayerDetail = ({ playerId, onClose, onPredictionsTabClick }) => {
             currentWeekOpponent={player.week_7_opponent}
             currentWeekIsHome={player.week_7_is_home}
             currentWeek={player.current_week || 7}
+            onModelAccuracyClick={onModelAccuracyClick}
           />
         )}
       </div>
