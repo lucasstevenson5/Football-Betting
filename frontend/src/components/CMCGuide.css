@@ -1,0 +1,215 @@
+.cmc-guide {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999;
+  animation: slideInFromRight 0.5s ease-out;
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.cmc-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 15px;
+  position: relative;
+}
+
+.cmc-image {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #aa182c 0%, #d4af37 100%); /* 49ers colors: red to gold */
+  padding: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease;
+  cursor: pointer;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.cmc-image:hover {
+  transform: scale(1.05) rotate(-2deg);
+  animation: none;
+}
+
+.cmc-speech-bubble {
+  position: relative;
+  background: white;
+  border-radius: 16px;
+  padding: 16px 20px;
+  max-width: 280px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  margin-bottom: 10px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Speech bubble tail pointing to CMC */
+.cmc-speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  right: 20px;
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-top: 15px solid white;
+}
+
+.cmc-message {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.5;
+}
+
+.cmc-close {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background: #aa182c;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.cmc-close:hover {
+  background: #8b1324;
+  transform: rotate(90deg);
+}
+
+.cmc-reset {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #aa182c 0%, #d4af37 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  width: 100%;
+}
+
+.cmc-reset:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(170, 24, 44, 0.4);
+}
+
+/* Minimized state */
+.cmc-guide.minimized {
+  cursor: pointer;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.cmc-minimized-image {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #aa182c 0%, #d4af37 100%);
+  padding: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease;
+}
+
+.cmc-guide.minimized:hover .cmc-minimized-image {
+  transform: scale(1.1);
+}
+
+.cmc-minimized-tooltip {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  background: #333;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  margin-bottom: 8px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.cmc-guide.minimized:hover .cmc-minimized-tooltip {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .cmc-guide {
+    bottom: 10px;
+    right: 10px;
+  }
+
+  .cmc-image {
+    width: 90px;
+    height: 90px;
+  }
+
+  .cmc-speech-bubble {
+    max-width: 220px;
+    padding: 12px 16px;
+  }
+
+  .cmc-message {
+    font-size: 13px;
+  }
+
+  .cmc-minimized-image {
+    width: 60px;
+    height: 60px;
+  }
+}
