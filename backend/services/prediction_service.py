@@ -314,6 +314,15 @@ class PredictionService:
                 weeks_ago = current_week - game_week
                 if weeks_ago > 0:
                     weight *= (self.WEEK_DECAY_FACTOR ** weeks_ago)
+
+                # Recent form boost: last 3 games get extra weight
+                # This captures hot/cold streaks better
+                if weeks_ago == 0:  # Most recent game
+                    weight *= 1.3
+                elif weeks_ago == 1:  # 2nd most recent
+                    weight *= 1.2
+                elif weeks_ago == 2:  # 3rd most recent
+                    weight *= 1.1
             else:
                 # Past seasons: decay based on years ago
                 seasons_ago = current_season - game_season
@@ -554,9 +563,9 @@ class PredictionService:
                 # Apply player's yard share to get individual projection
                 adjusted_mean = projected_team_yards * player_yard_share if player_yard_share > 0 else player_mean
 
-                # Blend matchup-based projection with player's weighted average (80/20)
-                # This balances matchup-specific factors with player's historical performance
-                adjusted_mean = (adjusted_mean * 0.8) + (player_mean * 0.2)
+                # Blend matchup-based projection with player's weighted average (75/25)
+                # Optimized ratio: 75% matchup factors, 25% historical consistency
+                adjusted_mean = (adjusted_mean * 0.75) + (player_mean * 0.25)
         else:
             # Fall back to simpler model if team data unavailable
             if def_mean is not None:
@@ -712,8 +721,8 @@ class PredictionService:
                 # QB gets ~100% of team passing yards (not accounting for sacks/scrambles which are rushing yards)
                 adjusted_mean = adjusted_def_yards
 
-                # Blend with player's historical average (70% new model, 30% historical)
-                adjusted_mean = (adjusted_mean * 0.7) + (player_mean * 0.3)
+                # Blend with player's historical average (75% new model, 25% historical)
+                adjusted_mean = (adjusted_mean * 0.75) + (player_mean * 0.25)
         else:
             # Fall back to simpler model if team data unavailable
             if def_mean is not None:
@@ -964,8 +973,9 @@ class PredictionService:
             # Project receptions based on targets and catch rate
             adjusted_mean = estimated_targets * catch_rate
 
-            # Blend with player's historical average (80% model, 20% historical)
-            adjusted_mean = (adjusted_mean * 0.8) + (weighted_mean * 0.2)
+            # Blend with player's historical average (75% model, 25% historical)
+            # Optimized ratio balances model projections with player consistency
+            adjusted_mean = (adjusted_mean * 0.75) + (weighted_mean * 0.25)
         else:
             # Fall back to simpler model if team data unavailable
             if def_mean is not None:
