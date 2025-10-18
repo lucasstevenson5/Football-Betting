@@ -5,6 +5,7 @@ import TrendingPlayers from './components/TrendingPlayers';
 import FantasyProjections from './components/FantasyProjections';
 import WeeklyModelAccuracy from './components/WeeklyModelAccuracy';
 import CMCGuide from './components/CMCGuide';
+import PukaNacuaGuide from './components/PukaNacuaGuide';
 import './App.css';
 
 function App() {
@@ -17,6 +18,13 @@ function App() {
   const [playerClicked, setPlayerClicked] = useState(false);
   const [predictionsTabClicked, setPredictionsTabClicked] = useState(false);
   const [modelAccuracyClicked, setModelAccuracyClicked] = useState(false);
+
+  // Track Puka guide progression (for Parlay Builder)
+  const [createParlayClicked, setCreateParlayClicked] = useState(false);
+  const [playerAddedToParlay, setPlayerAddedToParlay] = useState(false);
+  const [statlineAddedToParlay, setStatlineAddedToParlay] = useState(false);
+  const [sportsbookOddsEntered, setSportsbookOddsEntered] = useState(false);
+  const [parlaySaved, setParlaySaved] = useState(false);
 
   // Save active tab to localStorage whenever it changes
   useEffect(() => {
@@ -36,6 +44,27 @@ function App() {
   // Callback for when model accuracy tab is clicked within player detail
   const handleModelAccuracyClick = () => {
     setModelAccuracyClicked(true);
+  };
+
+  // Callbacks for Puka guide (Parlay Builder)
+  const handleCreateParlayClick = () => {
+    setCreateParlayClicked(true);
+  };
+
+  const handlePlayerAddedToParlay = () => {
+    setPlayerAddedToParlay(true);
+  };
+
+  const handleStatlineAddedToParlay = () => {
+    setStatlineAddedToParlay(true);
+  };
+
+  const handleSportsbookOddsEntered = () => {
+    setSportsbookOddsEntered(true);
+  };
+
+  const handleParlaySaved = () => {
+    setParlaySaved(true);
   };
 
   return (
@@ -88,17 +117,37 @@ function App() {
         )}
         {activeTab === 'trending' && <TrendingPlayers />}
         {activeTab === 'fantasy' && <FantasyProjections />}
-        {activeTab === 'parlays' && <ParlayBuilder />}
+        {activeTab === 'parlays' && (
+          <ParlayBuilder
+            onCreateParlayClick={handleCreateParlayClick}
+            onPlayerAddedToParlay={handlePlayerAddedToParlay}
+            onStatlineAddedToParlay={handleStatlineAddedToParlay}
+            onSportsbookOddsEntered={handleSportsbookOddsEntered}
+            onParlaySaved={handleParlaySaved}
+          />
+        )}
         {activeTab === 'accuracy' && <WeeklyModelAccuracy />}
       </div>
 
-      {/* CMC Interactive Guide */}
-      <CMCGuide
-        activeTab={activeTab}
-        playerClicked={playerClicked}
-        predictionsTabClicked={predictionsTabClicked}
-        modelAccuracyClicked={modelAccuracyClicked}
-      />
+      {/* Interactive Guides - show appropriate guide based on active tab */}
+      {activeTab === 'players' && (
+        <CMCGuide
+          activeTab={activeTab}
+          playerClicked={playerClicked}
+          predictionsTabClicked={predictionsTabClicked}
+          modelAccuracyClicked={modelAccuracyClicked}
+        />
+      )}
+
+      {activeTab === 'parlays' && (
+        <PukaNacuaGuide
+          createParlayClicked={createParlayClicked}
+          playerAddedToParlay={playerAddedToParlay}
+          statlineAddedToParlay={statlineAddedToParlay}
+          sportsbookOddsEntered={sportsbookOddsEntered}
+          parlaySaved={parlaySaved}
+        />
+      )}
     </div>
   );
 }
