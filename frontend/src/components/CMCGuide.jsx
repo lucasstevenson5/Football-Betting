@@ -5,7 +5,7 @@ import './CMCGuide.css';
  * CMCGuide - Interactive guide with Christian McCaffrey
  * Walks users through the app features step by step
  */
-const CMCGuide = ({ activeTab, onPlayerClick }) => {
+const CMCGuide = ({ activeTab, playerClicked }) => {
   const [guideStep, setGuideStep] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
   const [hasSeenGuide, setHasSeenGuide] = useState(false);
@@ -18,6 +18,13 @@ const CMCGuide = ({ activeTab, onPlayerClick }) => {
       setIsMinimized(true);
     }
   }, []);
+
+  // React to player being clicked
+  useEffect(() => {
+    if (playerClicked && guideStep === 0) {
+      setGuideStep(1); // Move from "click a player" to "check predictions tab"
+    }
+  }, [playerClicked, guideStep]);
 
   // Guide progression based on tab changes
   useEffect(() => {

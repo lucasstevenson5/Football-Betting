@@ -4,7 +4,7 @@ import PlayerCard from './PlayerCard';
 import PlayerDetail from './PlayerDetail';
 import './PlayerList.css';
 
-const PlayerList = () => {
+const PlayerList = ({ onPlayerClick }) => {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -254,7 +254,13 @@ const PlayerList = () => {
               <PlayerCard
                 key={player.id}
                 player={player}
-                onClick={(playerId) => setSelectedPlayerId(playerId)}
+                onClick={(playerId) => {
+                  setSelectedPlayerId(playerId);
+                  // Notify parent that a player was clicked (for CMC guide)
+                  if (onPlayerClick) {
+                    onPlayerClick();
+                  }
+                }}
               />
             ))}
           </div>

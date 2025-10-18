@@ -13,10 +13,18 @@ function App() {
     return localStorage.getItem('activeTab') || 'players';
   });
 
+  // Track when a player is clicked (for CMC guide)
+  const [playerClicked, setPlayerClicked] = useState(false);
+
   // Save active tab to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('activeTab', activeTab);
   }, [activeTab]);
+
+  // Callback for when a player is clicked
+  const handlePlayerClick = () => {
+    setPlayerClicked(true);
+  };
 
   return (
     <div className="App">
@@ -59,7 +67,7 @@ function App() {
 
       {/* Content */}
       <div className="app-content">
-        {activeTab === 'players' && <PlayerList />}
+        {activeTab === 'players' && <PlayerList onPlayerClick={handlePlayerClick} />}
         {activeTab === 'trending' && <TrendingPlayers />}
         {activeTab === 'fantasy' && <FantasyProjections />}
         {activeTab === 'parlays' && <ParlayBuilder />}
@@ -67,7 +75,7 @@ function App() {
       </div>
 
       {/* CMC Interactive Guide */}
-      <CMCGuide activeTab={activeTab} />
+      <CMCGuide activeTab={activeTab} playerClicked={playerClicked} />
     </div>
   );
 }
