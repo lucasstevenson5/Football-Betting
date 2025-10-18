@@ -45,13 +45,22 @@ const CMCGuide = ({ activeTab, playerClicked, predictionsTabClicked }) => {
     } else if (activeTab === 'accuracy' && guideStep === 2) {
       // User is on accuracy tab, move to step 3
       setGuideStep(3);
-    } else if (activeTab === 'accuracy' && guideStep === 3) {
-      // User is on accuracy tab at step 3, show final message after delay
-      setTimeout(() => {
-        setGuideStep(4);
-      }, 1500);
     }
   }, [activeTab, guideStep, hasSeenGuide]);
+
+  // Separate effect for step 3 -> 4 transition with delay
+  useEffect(() => {
+    if (hasSeenGuide) return;
+
+    if (guideStep === 3) {
+      // Show final message after delay
+      const timer = setTimeout(() => {
+        setGuideStep(4);
+      }, 1500);
+
+      return () => clearTimeout(timer); // Cleanup on unmount
+    }
+  }, [guideStep, hasSeenGuide]);
 
   // Messages for each step
   const getGuideMessage = () => {
