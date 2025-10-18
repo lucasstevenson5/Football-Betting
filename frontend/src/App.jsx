@@ -4,6 +4,7 @@ import ParlayBuilder from './components/ParlayBuilder';
 import TrendingPlayers from './components/TrendingPlayers';
 import FantasyProjections from './components/FantasyProjections';
 import WeeklyModelAccuracy from './components/WeeklyModelAccuracy';
+import PlayerMascot from './components/PlayerMascot';
 import './App.css';
 
 function App() {
@@ -21,6 +22,8 @@ function App() {
     <div className="App">
       {/* Tab Navigation */}
       <div className="app-header">
+        <h1 className="app-title">Football Betting Analytics</h1>
+        <PlayerMascot size="medium" autoRotate={true} rotateInterval={6000} />
         <div className="app-tabs">
           <button
             className={`app-tab ${activeTab === 'players' ? 'active' : ''}`}
